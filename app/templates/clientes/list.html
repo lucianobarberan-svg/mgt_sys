@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Clientes{% endblock %}
+
+{% block conteudo %}
+<div class="acoes" style="justify-content: space-between; margin-bottom: 1.25rem;">
+    <h1>Clientes</h1>
+    <a class="botao" href="{{ url_for('web.clientes_novo') }}">+ Novo cliente</a>
+</div>
+
+{% if clientes %}
+<table>
+    <caption>Lista de clientes cadastrados ({{ clientes|length }})</caption>
+    <thead>
+        <tr>
+            <th scope="col">Nome</th>
+            <th scope="col">Telefone</th>
+            <th scope="col">E-mail</th>
+            <th scope="col">Cidade/UF</th>
+            <th scope="col">Orçamentos</th>
+            <th scope="col">Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for c in clientes %}
+        <tr>
+            <td>{{ c.nome }}</td>
+            <td>{{ c.telefone or "—" }}</td>
+            <td>{{ c.email or "—" }}</td>
+            <td>{{ (c.cidade + "/" + c.uf) if c.cidade else "—" }}</td>
+            <td>{{ c.orcamentos|length }}</td>
+            <td class="acoes">
+                <a class="botao botao--secundario" href="{{ url_for('web.clientes_editar', cliente_id=c.id) }}">Editar</a>
+                <form method="post" action="{{ url_for('web.clientes_excluir', cliente_id=c.id) }}" onsubmit="return confirm('Excluir o cliente {{ c.nome }}? Todos os orçamentos vinculados também serão excluídos.');" style="display:inline;">
+                    <button type="submit" class="botao botao--perigo">Excluir</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="vazio">Nenhum cliente cadastrado ainda. <a href="{{ url_for('web.clientes_novo') }}">Cadastrar o primeiro cliente</a>.</p>
+{% endif %}
+{% endblock %}

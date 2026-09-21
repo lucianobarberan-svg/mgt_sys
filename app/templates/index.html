@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Início{% endblock %}
+
+{% block conteudo %}
+<h1>Painel MGT Presentes Personalizados</h1>
+<p>Sistema de gestão de clientes e orçamentos de produtos personalizados: canecas, chaveiros, canetas, copos, descansos de mouse, quebra-cabeças, camisetas, bonés, chinelos, azulejos, ecobags, garrafas e outros itens sob encomenda.</p>
+
+<section class="grade-cartoes" aria-label="Resumo geral">
+    <div class="cartao estatistica">
+        <strong>{{ total_clientes }}</strong>
+        <span>Cliente(s) cadastrado(s)</span>
+    </div>
+    <div class="cartao estatistica">
+        <strong>{{ total_orcamentos }}</strong>
+        <span>Orçamento(s) registrado(s)</span>
+    </div>
+</section>
+
+<section class="cartao">
+    <h2>Orçamentos recentes</h2>
+    {% if orcamentos_recentes %}
+    <table>
+        <caption class="sr-only">Últimos orçamentos solicitados</caption>
+        <thead>
+            <tr>
+                <th scope="col">Código</th>
+                <th scope="col">Cliente</th>
+                <th scope="col">Produto</th>
+                <th scope="col">Status</th>
+                <th scope="col">Data</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for o in orcamentos_recentes %}
+            <tr>
+                <td>{{ o.codigo }}</td>
+                <td>{{ o.cliente.nome }}</td>
+                <td>{{ o.tipo_produto }}</td>
+                <td><span class="badge">{{ o.status }}</span></td>
+                <td>{{ o.data_solicitacao.strftime("%d/%m/%Y") }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="vazio">Nenhum orçamento cadastrado ainda. <a href="{{ url_for('web.orcamentos_novo') }}">Cadastrar o primeiro orçamento</a>.</p>
+    {% endif %}
+</section>
+
+<section class="cartao">
+    <h2>Atalhos</h2>
+    <div class="acoes">
+        <a class="botao" href="{{ url_for('web.clientes_novo') }}">+ Novo cliente</a>
+        <a class="botao" href="{{ url_for('web.orcamentos_novo') }}">+ Novo orçamento</a>
+        <a class="botao botao--secundario" href="{{ url_for('web.consulta') }}">Consultar cliente/orçamento</a>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ "Editar cliente" if cliente else "Novo cliente" }}{% endblock %}
+
+{% block conteudo %}
+{% set dados = form if form is not none else cliente %}
+<h1>{{ "Editar cliente" if cliente else "Novo cliente" }}</h1>
+
+<form method="post" novalidate>
+    <fieldset>
+        <legend>Dados pessoais</legend>
+
+        <div class="campo">
+            <label for="nome">Nome completo <span aria-hidden="true">*</span></label>
+            <input type="text" id="nome" name="nome" required
+                   value="{{ dados.nome if dados else '' }}"
+                   aria-describedby="ajuda-nome">
+            <span id="ajuda-nome" class="dica">Campo obrigatório.</span>
+        </div>
+
+        <div class="linha-campos">
+            <div class="campo">
+                <label for="telefone">Telefone</label>
+                <input type="tel" id="telefone" name="telefone" placeholder="(11) 90000-0000"
+                       value="{{ dados.telefone if dados else '' }}">
+            </div>
+            <div class="campo">
+                <label for="email">E-mail</label>
+                <input type="email" id="email" name="email"
+                       value="{{ dados.email if dados else '' }}">
+            </div>
+        </div>
+    </fieldset>
+
+    <fieldset>
+        <legend>Endereço</legend>
+
+        <div class="linha-campos">
+            <div class="campo">
+                <label for="cep">CEP</label>
+                <input type="text" id="cep" name="cep" inputmode="numeric" maxlength="9"
+                       placeholder="00000-000" aria-describedby="ajuda-cep"
+                       value="{{ dados.cep if dados else '' }}">
+                <span id="ajuda-cep" class="dica" role="status" aria-live="polite" data-status-cep></span>
+            </div>
+        </div>
+
+        <div class="campo">
+            <label for="endereco">Endereço</label>
+            <input type="text" id="endereco" name="endereco"
+                   value="{{ dados.endereco if dados else '' }}">
+        </div>
+
+        <div class="linha-campos">
+            <div class="campo">
+                <label for="bairro">Bairro</label>
+                <input type="text" id="bairro" name="bairro"
+                       value="{{ dados.bairro if dados else '' }}">
+            </div>
+            <div class="campo">
+                <label for="cidade">Cidade</label>
+                <input type="text" id="cidade" name="cidade"
+                       value="{{ dados.cidade if dados else '' }}">
+            </div>
+            <div class="campo">
+                <label for="uf">UF</label>
+                <input type="text" id="uf" name="uf" maxlength="2"
+                       value="{{ dados.uf if dados else '' }}">
+            </div>
+        </div>
+    </fieldset>
+
+    <div class="acoes">
+        <button type="submit" class="botao">Salvar</button>
+        <a class="botao botao--secundario" href="{{ url_for('web.clientes_lista') }}">Cancelar</a>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/cep.js') }}"></script>
+{% endblock %}

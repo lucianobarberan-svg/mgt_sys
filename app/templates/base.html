@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MGT Sys{% endblock %} · MGT Presentes Personalizados</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <a class="skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a>
+
+    <header class="cabecalho" role="banner">
+        <div class="container cabecalho__conteudo">
+            <a href="{{ url_for('web.index') }}" class="marca">MGT Sys</a>
+            <nav aria-label="Navegação principal">
+                <ul class="menu">
+                    <li><a href="{{ url_for('web.index') }}">Início</a></li>
+                    <li><a href="{{ url_for('web.clientes_lista') }}">Clientes</a></li>
+                    <li><a href="{{ url_for('web.orcamentos_lista') }}">Orçamentos</a></li>
+                    <li><a href="{{ url_for('web.consulta') }}">Consulta</a></li>
+                    <li><a href="{{ url_for('web.dashboard') }}">Dashboard</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main id="conteudo-principal" class="container conteudo" tabindex="-1">
+        {% with mensagens = get_flashed_messages(with_categories=true) %}
+            {% if mensagens %}
+                <div class="mensagens" role="status" aria-live="polite">
+                    {% for categoria, mensagem in mensagens %}
+                        <p class="mensagem mensagem--{{ categoria }}">{{ mensagem }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block conteudo %}{% endblock %}
+    </main>
+
+    <footer class="rodape" role="contentinfo">
+        <div class="container">
+            <p>MGT Sys &middot; MGT Presentes Personalizados &middot; Projeto Integrador Univesp &middot; {{ ano_atual }}</p>
+        </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>
