@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block conteudo %}
+<h1>Dashboard</h1>
+<p>Visão geral dos orçamentos cadastrados no sistema.</p>
+
+<section class="grade-cartoes" id="resumo-numeros" aria-label="Resumo em números">
+    <div class="cartao estatistica">
+        <strong id="num-clientes">–</strong>
+        <span>Clientes</span>
+    </div>
+    <div class="cartao estatistica">
+        <strong id="num-orcamentos">–</strong>
+        <span>Orçamentos</span>
+    </div>
+    <div class="cartao estatistica">
+        <strong id="num-valor">–</strong>
+        <span>Valor total estimado</span>
+    </div>
+</section>
+
+<div class="linha-campos">
+    <div class="grafico-container">
+        <h2>Orçamentos por status</h2>
+        <canvas id="grafico-status" role="img" aria-label="Gráfico de barras com a quantidade de orçamentos por status"></canvas>
+        <div id="tabela-status-alt" class="sr-only"></div>
+    </div>
+    <div class="grafico-container">
+        <h2>Orçamentos por tipo de produto</h2>
+        <canvas id="grafico-tipo" role="img" aria-label="Gráfico de pizza com a quantidade de orçamentos por tipo de produto"></canvas>
+        <div id="tabela-tipo-alt" class="sr-only"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/vendor-chart.umd.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Consulta{% endblock %}
+
+{% block conteudo %}
+<h1>Consulta de clientes e orçamentos</h1>
+<p>Busque um cliente pelo nome ou um orçamento pelo código.</p>
+
+<section class="cartao">
+    <h2 id="titulo-busca-cliente">Buscar cliente pelo nome</h2>
+    <form id="form-busca-cliente" role="search" aria-labelledby="titulo-busca-cliente">
+        <div class="campo">
+            <label for="busca-nome-cliente">Nome do cliente</label>
+            <input type="search" id="busca-nome-cliente" name="nome" placeholder="Digite o nome do cliente" autocomplete="off">
+        </div>
+        <button type="submit" class="botao">Buscar</button>
+    </form>
+    <div id="resultado-clientes" role="status" aria-live="polite" aria-atomic="true" style="margin-top: 1rem;"></div>
+</section>
+
+<section class="cartao">
+    <h2 id="titulo-busca-orcamento">Buscar orçamento pelo código</h2>
+    <form id="form-busca-orcamento" role="search" aria-labelledby="titulo-busca-orcamento">
+        <div class="campo">
+            <label for="busca-codigo-orcamento">Código do orçamento</label>
+            <input type="search" id="busca-codigo-orcamento" name="codigo" placeholder="Ex.: ORC-0001" autocomplete="off">
+        </div>
+        <button type="submit" class="botao">Buscar</button>
+    </form>
+    <div id="resultado-orcamentos" role="status" aria-live="polite" aria-atomic="true" style="margin-top: 1rem;"></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/consulta.js') }}"></script>
+{% endblock %}
