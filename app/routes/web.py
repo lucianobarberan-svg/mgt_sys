@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
@@ -31,8 +31,12 @@ def index():
 # --------------------------------------------------------------------------
 @web_bp.route("/clientes")
 def clientes_lista():
-    clientes = Cliente.query.order_by(Cliente.nome).all()
-    return render_template("clientes/list.html", clientes=clientes)
+    termo_busca = request.args.get("nome", "").strip()
+    query = Cliente.query
+    if termo_busca:
+        query = query.filter(Cliente.nome.ilike(f"%{termo_busca}%"))
+    clientes = query.order_by(Cliente.nome).all()
+    return render_template("clientes/list.html", clientes=clientes, termo_busca=termo_busca)
 
 
 @web_bp.route("/clientes/novo", methods=["GET", "POST"])
@@ -101,8 +105,59 @@ def clientes_excluir(cliente_id):
 # --------------------------------------------------------------------------
 @web_bp.route("/orcamentos")
 def orcamentos_lista():
-    orcamentos = Orcamento.query.order_by(Orcamento.data_solicitacao.desc()).all()
-    return render_template("orcamentos/list.html", orcamentos=orcamentos)
+    codigo_busca = request.args.get("codigo", "").strip()
+    cliente_id = request.args.get("cliente_id", "").strip()
+    data_inicio = request.args.get("data_inicio", "").strip()
+    data_fim = request.args.get("data_fim", "").strip()
+    periodo = request.args.get("periodo", "").strip()
+
+    # Atalhos de período: mês atual / mês anterior (calculados a partir da data de hoje).
+    if periodo == "mes_atual":
+        hoje = date.today()
+        data_inicio = hoje.replace(day=1).strftime("%Y-%m-%d")
+        data_fim = hoje.strftime("%Y-%m-%d")
+    elif periodo == "mes_anterior":
+        hoje = date.today()
+        primeiro_dia_mes_atual = hoje.replace(day=1)
+        ultimo_dia_mes_anterior = primeiro_dia_mes_atual - timedelta(days=1)
+        primeiro_dia_mes_anterior = ultimo_dia_mes_anterior.replace(day=1)
+        data_inicio = primeiro_dia_mes_anterior.strftime("%Y-%m-%d")
+        data_fim = ultimo_dia_mes_anterior.strftime("%Y-%m-%d")
+
+    query = Orcamento.query
+    if codigo_busca:
+        query = query.filter(Orcamento.codigo.ilike(f"%{codigo_busca}%"))
+    if cliente_id:
+        query = query.filter(Orcamento.cliente_id == cliente_id)
+    if data_inicio:
+        try:
+            dt_inicio = datetime.strptime(data_inicio, "%Y-%m-%d").date()
+            query = query.filter(Orcamento.data_solicitacao >= dt_inicio)
+        except ValueError:
+            data_inicio = ""
+    if data_fim:
+        try:
+            dt_fim = datetime.strptime(data_fim, "%Y-%m-%d").date()
+            # Inclui o dia final inteiro (até 23:59:59).
+            query = query.filter(Orcamento.data_solicitacao < dt_fim + timedelta(days=1))
+        except ValueError:
+            data_fim = ""
+
+    orcamentos = query.order_by(Orcamento.data_solicitacao.desc()).all()
+
+    cliente_filtrado = None
+    if cliente_id:
+        cliente_filtrado = Cliente.query.get(cliente_id)
+
+    return render_template(
+        "orcamentos/list.html",
+        orcamentos=orcamentos,
+        codigo_busca=codigo_busca,
+        cliente_id=cliente_id,
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        cliente_filtrado=cliente_filtrado,
+    )
 
 
 @web_bp.route("/orcamentos/novo", methods=["GET", "POST"])

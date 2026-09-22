@@ -24,11 +24,12 @@ substituindo o controle de clientes e pedidos atualmente feito em planilhas de E
 
 ## Funcionalidades
 
-- Cadastro, edição, exclusão e listagem de clientes
+- Cadastro, edição, exclusão e listagem de clientes, com busca por nome direto na lista
 - Cadastro, edição, exclusão e listagem de orçamentos (vinculados a um cliente), com geração
-  automática de código (`ORC-0001`, `ORC-0002`, ...)
-- Consulta de cliente pelo nome
-- Consulta de orçamento pelo código
+  automática de código (`ORC-0001`, `ORC-0002`, ...), busca por código e filtro por período
+  (data inicial/final, com atalhos para "mês atual" e "mês anterior") direto na lista
+- Consulta de cliente pelo nome e de orçamento pelo código (página dedicada de consulta),
+  com atalho para ver todos os orçamentos de um cliente encontrado
 - Dashboard com gráficos de orçamentos por status e por tipo de produto
 
 ## Estrutura do projeto

@@ -33,7 +33,7 @@
                     <td>${escapeHtml(c.nome)}</td>
                     <td>${escapeHtml(c.telefone || "—")}</td>
                     <td>${escapeHtml(c.email || "—")}</td>
-                    <td>${c.quantidade_orcamentos}</td>
+                    <td><a href="/orcamentos?cliente_id=${encodeURIComponent(c.id)}" title="Ver orçamentos de ${escapeHtml(c.nome)}">${c.quantidade_orcamentos}</a></td>
                 </tr>`).join("");
 
             resultadoClientes.innerHTML = `

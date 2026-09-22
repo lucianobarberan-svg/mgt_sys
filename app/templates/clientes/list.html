@@ -7,9 +7,30 @@
     <a class="botao" href="{{ url_for('web.clientes_novo') }}">+ Novo cliente</a>
 </div>
 
+<form method="get" action="{{ url_for('web.clientes_lista') }}" role="search" class="cartao" aria-label="Buscar cliente pelo nome">
+    <div class="linha-campos" style="align-items: flex-end;">
+        <div class="campo" style="margin-bottom: 0;">
+            <label for="filtro-nome-cliente">Buscar por nome</label>
+            <input type="search" id="filtro-nome-cliente" name="nome" value="{{ termo_busca }}" placeholder="Digite o nome do cliente" autocomplete="off">
+        </div>
+        <div class="campo" style="margin-bottom: 0;">
+            <button type="submit" class="botao">Buscar</button>
+            {% if termo_busca %}
+            <a class="botao botao--secundario" href="{{ url_for('web.clientes_lista') }}">Limpar</a>
+            {% endif %}
+        </div>
+    </div>
+</form>
+
 {% if clientes %}
 <table>
-    <caption>Lista de clientes cadastrados ({{ clientes|length }})</caption>
+    <caption>
+        {% if termo_busca %}
+        Clientes encontrados para "{{ termo_busca }}" ({{ clientes|length }})
+        {% else %}
+        Lista de clientes cadastrados ({{ clientes|length }})
+        {% endif %}
+    </caption>
     <thead>
         <tr>
             <th scope="col">Nome</th>
@@ -39,6 +60,12 @@
     </tbody>
 </table>
 {% else %}
-<p class="vazio">Nenhum cliente cadastrado ainda. <a href="{{ url_for('web.clientes_novo') }}">Cadastrar o primeiro cliente</a>.</p>
+<p class="vazio">
+    {% if termo_busca %}
+    Nenhum cliente encontrado para "{{ termo_busca }}". <a href="{{ url_for('web.clientes_lista') }}">Limpar busca</a>.
+    {% else %}
+    Nenhum cliente cadastrado ainda. <a href="{{ url_for('web.clientes_novo') }}">Cadastrar o primeiro cliente</a>.
+    {% endif %}
+</p>
 {% endif %}
 {% endblock %}

@@ -7,9 +7,47 @@
     <a class="botao" href="{{ url_for('web.orcamentos_novo') }}">+ Novo orçamento</a>
 </div>
 
+{% if cliente_filtrado %}
+<p class="vazio" style="text-align: left;">Mostrando orçamentos de <strong>{{ cliente_filtrado.nome }}</strong>. <a href="{{ url_for('web.orcamentos_lista') }}">Ver todos os orçamentos</a>.</p>
+{% endif %}
+
+<form method="get" action="{{ url_for('web.orcamentos_lista') }}" role="search" class="cartao" aria-label="Filtrar orçamentos">
+    {% if cliente_id %}
+    <input type="hidden" name="cliente_id" value="{{ cliente_id }}">
+    {% endif %}
+    <div class="linha-campos">
+        <div class="campo" style="margin-bottom: 0;">
+            <label for="filtro-codigo-orcamento">Buscar por código</label>
+            <input type="search" id="filtro-codigo-orcamento" name="codigo" value="{{ codigo_busca }}" placeholder="Ex.: ORC-0001" autocomplete="off">
+        </div>
+        <div class="campo" style="margin-bottom: 0;">
+            <label for="filtro-data-inicio">Solicitado a partir de</label>
+            <input type="date" id="filtro-data-inicio" name="data_inicio" value="{{ data_inicio }}">
+        </div>
+        <div class="campo" style="margin-bottom: 0;">
+            <label for="filtro-data-fim">Solicitado até</label>
+            <input type="date" id="filtro-data-fim" name="data_fim" value="{{ data_fim }}">
+        </div>
+    </div>
+    <div class="acoes" style="margin-top: 0.75rem;">
+        <button type="submit" class="botao">Filtrar</button>
+        <a class="botao botao--secundario" href="{{ url_for('web.orcamentos_lista', periodo='mes_atual', cliente_id=cliente_id or None) }}">Mês atual</a>
+        <a class="botao botao--secundario" href="{{ url_for('web.orcamentos_lista', periodo='mes_anterior', cliente_id=cliente_id or None) }}">Mês anterior</a>
+        {% if codigo_busca or data_inicio or data_fim or cliente_id %}
+        <a class="botao botao--secundario" href="{{ url_for('web.orcamentos_lista') }}">Limpar filtros</a>
+        {% endif %}
+    </div>
+</form>
+
 {% if orcamentos %}
 <table>
-    <caption>Lista de orçamentos ({{ orcamentos|length }})</caption>
+    <caption>
+        {% if codigo_busca or cliente_id or data_inicio or data_fim %}
+        Orçamentos encontrados com os filtros aplicados ({{ orcamentos|length }})
+        {% else %}
+        Lista de orçamentos ({{ orcamentos|length }})
+        {% endif %}
+    </caption>
     <thead>
         <tr>
             <th scope="col">Código</th>
@@ -41,6 +79,12 @@
     </tbody>
 </table>
 {% else %}
-<p class="vazio">Nenhum orçamento cadastrado ainda. <a href="{{ url_for('web.orcamentos_novo') }}">Cadastrar o primeiro orçamento</a>.</p>
+<p class="vazio">
+    {% if codigo_busca or cliente_id or data_inicio or data_fim %}
+    Nenhum orçamento encontrado com os filtros aplicados. <a href="{{ url_for('web.orcamentos_lista') }}">Limpar filtros</a>.
+    {% else %}
+    Nenhum orçamento cadastrado ainda. <a href="{{ url_for('web.orcamentos_novo') }}">Cadastrar o primeiro orçamento</a>.
+    {% endif %}
+</p>
 {% endif %}
 {% endblock %}
