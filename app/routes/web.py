@@ -8,6 +8,28 @@ from app.models import STATUS_ORCAMENTO, TIPOS_PRODUTO, Cliente, Orcamento
 web_bp = Blueprint("web", __name__)
 
 
+def _resolver_intervalo_datas(args):
+    """Resolve data_inicio/data_fim (YYYY-MM-DD) a partir dos parâmetros da
+    URL, aplicando os atalhos de período (?periodo=mes_atual|mes_anterior)
+    quando presentes. Usado pela lista de orçamentos e pelo dashboard."""
+    data_inicio = args.get("data_inicio", "").strip()
+    data_fim = args.get("data_fim", "").strip()
+    periodo = args.get("periodo", "").strip()
+
+    hoje = date.today()
+    if periodo == "mes_atual":
+        data_inicio = hoje.replace(day=1).strftime("%Y-%m-%d")
+        data_fim = hoje.strftime("%Y-%m-%d")
+    elif periodo == "mes_anterior":
+        primeiro_dia_mes_atual = hoje.replace(day=1)
+        ultimo_dia_mes_anterior = primeiro_dia_mes_atual - timedelta(days=1)
+        primeiro_dia_mes_anterior = ultimo_dia_mes_anterior.replace(day=1)
+        data_inicio = primeiro_dia_mes_anterior.strftime("%Y-%m-%d")
+        data_fim = ultimo_dia_mes_anterior.strftime("%Y-%m-%d")
+
+    return data_inicio, data_fim
+
+
 # --------------------------------------------------------------------------
 # Página inicial
 # --------------------------------------------------------------------------
@@ -107,41 +129,12 @@ def clientes_excluir(cliente_id):
 def orcamentos_lista():
     codigo_busca = request.args.get("codigo", "").strip()
     cliente_id = request.args.get("cliente_id", "").strip()
-    data_inicio = request.args.get("data_inicio", "").strip()
-    data_fim = request.args.get("data_fim", "").strip()
-    periodo = request.args.get("periodo", "").strip()
-
-    # Atalhos de período: mês atual / mês anterior (calculados a partir da data de hoje).
-    if periodo == "mes_atual":
-        hoje = date.today()
-        data_inicio = hoje.replace(day=1).strftime("%Y-%m-%d")
-        data_fim = hoje.strftime("%Y-%m-%d")
-    elif periodo == "mes_anterior":
-        hoje = date.today()
-        primeiro_dia_mes_atual = hoje.replace(day=1)
-        ultimo_dia_mes_anterior = primeiro_dia_mes_atual - timedelta(days=1)
-        primeiro_dia_mes_anterior = ultimo_dia_mes_anterior.replace(day=1)
-        data_inicio = primeiro_dia_mes_anterior.strftime("%Y-%m-%d")
-        data_fim = ultimo_dia_mes_anterior.strftime("%Y-%m-%d")
 
     query = Orcamento.query
     if codigo_busca:
         query = query.filter(Orcamento.codigo.ilike(f"%{codigo_busca}%"))
     if cliente_id:
         query = query.filter(Orcamento.cliente_id == cliente_id)
-    if data_inicio:
-        try:
-            dt_inicio = datetime.strptime(data_inicio, "%Y-%m-%d").date()
-            query = query.filter(Orcamento.data_solicitacao >= dt_inicio)
-        except ValueError:
-            data_inicio = ""
-    if data_fim:
-        try:
-            dt_fim = datetime.strptime(data_fim, "%Y-%m-%d").date()
-            # Inclui o dia final inteiro (até 23:59:59).
-            query = query.filter(Orcamento.data_solicitacao < dt_fim + timedelta(days=1))
-        except ValueError:
-            data_fim = ""
 
     orcamentos = query.order_by(Orcamento.data_solicitacao.desc()).all()
 
@@ -154,8 +147,6 @@ def orcamentos_lista():
         orcamentos=orcamentos,
         codigo_busca=codigo_busca,
         cliente_id=cliente_id,
-        data_inicio=data_inicio,
-        data_fim=data_fim,
         cliente_filtrado=cliente_filtrado,
     )
 
@@ -292,4 +283,5 @@ def consulta():
 # --------------------------------------------------------------------------
 @web_bp.route("/dashboard")
 def dashboard():
-    return render_template("dashboard.html")
+    data_inicio, data_fim = _resolver_intervalo_datas(request.args)
+    return render_template("dashboard.html", data_inicio=data_inicio, data_fim=data_fim)

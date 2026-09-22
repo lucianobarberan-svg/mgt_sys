@@ -48,7 +48,7 @@
             <td>{{ c.telefone or "—" }}</td>
             <td>{{ c.email or "—" }}</td>
             <td>{{ (c.cidade + "/" + c.uf) if c.cidade else "—" }}</td>
-            <td>{{ c.orcamentos|length }}</td>
+            <td><a href="{{ url_for('web.orcamentos_lista', cliente_id=c.id) }}" title="Ver orçamentos de {{ c.nome }}">{{ c.orcamentos|length }}</a></td>
             <td class="acoes">
                 <a class="botao botao--secundario" href="{{ url_for('web.clientes_editar', cliente_id=c.id) }}">Editar</a>
                 <form method="post" action="{{ url_for('web.clientes_excluir', cliente_id=c.id) }}" onsubmit="return confirm('Excluir o cliente {{ c.nome }}? Todos os orçamentos vinculados também serão excluídos.');" style="display:inline;">

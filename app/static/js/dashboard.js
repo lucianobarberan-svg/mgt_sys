@@ -5,8 +5,8 @@
  * leitores de tela, já que gráficos em canvas não são acessíveis por padrão.
  */
 (function () {
-    const corPrimaria = "#7a3b69";
-    const paleta = ["#7a3b69", "#b06a9c", "#d99bc4", "#e7c1de", "#f3ddef", "#4d2643", "#9c5486"];
+    const corPrimaria = "#1e4f58";
+    const paleta = ["#1e4f58", "#2f707a", "#c6a15b", "#5a9099", "#8fbabf", "#0d2b30", "#a9c9a0"];
 
     function formatarMoeda(valor) {
         return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -23,7 +23,18 @@
 
     async function carregarDashboard() {
         try {
-            const resposta = await fetch("/api/dashboard/resumo");
+            const campoDataInicio = document.getElementById("filtro-data-inicio");
+            const campoDataFim = document.getElementById("filtro-data-fim");
+            const parametros = new URLSearchParams();
+            if (campoDataInicio && campoDataInicio.value) {
+                parametros.set("data_inicio", campoDataInicio.value);
+            }
+            if (campoDataFim && campoDataFim.value) {
+                parametros.set("data_fim", campoDataFim.value);
+            }
+            const query = parametros.toString();
+
+            const resposta = await fetch(`/api/dashboard/resumo${query ? "?" + query : ""}`);
             const dados = await resposta.json();
 
             document.getElementById("num-clientes").textContent = dados.total_clientes;

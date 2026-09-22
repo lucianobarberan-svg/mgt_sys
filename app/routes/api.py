@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from flask import Blueprint, jsonify, request
 
 from app.models import Cliente, Orcamento
@@ -58,7 +60,27 @@ def api_orcamento_detalhe(orcamento_id):
 # --------------------------------------------------------------------------
 @api_bp.route("/dashboard/resumo", methods=["GET"])
 def api_dashboard_resumo():
-    orcamentos = Orcamento.query.all()
+    """Resumo agregado dos orçamentos, com filtro opcional por período
+    (?data_inicio=YYYY-MM-DD&data_fim=YYYY-MM-DD)."""
+    data_inicio = request.args.get("data_inicio", "").strip()
+    data_fim = request.args.get("data_fim", "").strip()
+
+    query = Orcamento.query
+    if data_inicio:
+        try:
+            dt_inicio = datetime.strptime(data_inicio, "%Y-%m-%d").date()
+            query = query.filter(Orcamento.data_solicitacao >= dt_inicio)
+        except ValueError:
+            pass
+    if data_fim:
+        try:
+            dt_fim = datetime.strptime(data_fim, "%Y-%m-%d").date()
+            # Inclui o dia final inteiro (até 23:59:59).
+            query = query.filter(Orcamento.data_solicitacao < dt_fim + timedelta(days=1))
+        except ValueError:
+            pass
+
+    orcamentos = query.all()
 
     por_status = {}
     por_tipo = {}

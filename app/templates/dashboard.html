@@ -5,6 +5,30 @@
 <h1>Dashboard</h1>
 <p>Visão geral dos orçamentos cadastrados no sistema.</p>
 
+<form method="get" action="{{ url_for('web.dashboard') }}" role="search" class="cartao" aria-label="Filtrar dashboard por período">
+    <div class="linha-campos">
+        <div class="campo" style="margin-bottom: 0;">
+            <label for="filtro-data-inicio">Solicitado a partir de</label>
+            <input type="date" id="filtro-data-inicio" name="data_inicio" value="{{ data_inicio }}">
+        </div>
+        <div class="campo" style="margin-bottom: 0;">
+            <label for="filtro-data-fim">Solicitado até</label>
+            <input type="date" id="filtro-data-fim" name="data_fim" value="{{ data_fim }}">
+        </div>
+    </div>
+    <div class="acoes" style="margin-top: 0.75rem;">
+        <button type="submit" class="botao">Filtrar</button>
+        <a class="botao botao--secundario" href="{{ url_for('web.dashboard', periodo='mes_atual') }}">Mês atual</a>
+        <a class="botao botao--secundario" href="{{ url_for('web.dashboard', periodo='mes_anterior') }}">Mês anterior</a>
+        {% if data_inicio or data_fim %}
+        <a class="botao botao--secundario" href="{{ url_for('web.dashboard') }}">Limpar filtro</a>
+        {% endif %}
+    </div>
+    {% if data_inicio or data_fim %}
+    <p class="dica" style="margin: 0.75rem 0 0;">Mostrando dados de {{ data_inicio or "…" }} até {{ data_fim or "…" }}.</p>
+    {% endif %}
+</form>
+
 <section class="grade-cartoes" id="resumo-numeros" aria-label="Resumo em números">
     <div class="cartao estatistica">
         <strong id="num-clientes">–</strong>

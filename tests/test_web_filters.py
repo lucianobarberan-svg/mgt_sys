@@ -51,48 +51,52 @@ def test_orcamentos_lista_filtra_por_cliente_id(app, db, client):
     assert "Cliente A".encode() in resposta.data
 
 
-def test_orcamentos_lista_filtra_por_intervalo_de_datas(app, db, client):
+def test_orcamentos_lista_ignora_filtro_de_data(app, db, client):
+    # O filtro por período (data/mês atual/mês anterior) pertence apenas ao
+    # Dashboard — a lista de Orçamentos filtra somente por código e cliente.
     hoje = date.today()
-    ha_dez_dias = hoje - timedelta(days=10)
     ha_sessenta_dias = hoje - timedelta(days=60)
 
-    _, orcamento_recente = _criar_cliente_com_orcamento(db, "Cliente Recente", data_solicitacao=ha_dez_dias)
+    _, orcamento_recente = _criar_cliente_com_orcamento(db, "Cliente Recente", data_solicitacao=hoje)
     _, orcamento_antigo = _criar_cliente_com_orcamento(db, "Cliente Antigo", data_solicitacao=ha_sessenta_dias)
 
-    data_inicio = (hoje - timedelta(days=15)).strftime("%Y-%m-%d")
+    data_inicio = hoje.replace(day=1).strftime("%Y-%m-%d")
     resposta = client.get(f"/orcamentos?data_inicio={data_inicio}")
 
     assert resposta.status_code == 200
     assert orcamento_recente.codigo.encode() in resposta.data
-    assert orcamento_antigo.codigo.encode() not in resposta.data
+    assert orcamento_antigo.codigo.encode() in resposta.data
+    assert b"M\xc3\xaas atual" not in resposta.data
+    assert b"M\xc3\xaas anterior" not in resposta.data
 
 
-def test_orcamentos_lista_atalho_mes_atual(app, db, client):
+def test_clientes_lista_link_orcamentos_do_cliente(app, db, client):
+    cliente, _ = _criar_cliente_com_orcamento(db, "Thaís Toledo")
+
+    resposta = client.get("/clientes")
+    assert resposta.status_code == 200
+    assert f"/orcamentos?cliente_id={cliente.id}".encode() in resposta.data
+
+
+def test_dashboard_pagina_aceita_filtro_de_periodo(app, db, client):
+    resposta = client.get("/dashboard?periodo=mes_atual")
+    assert resposta.status_code == 200
+    # Os campos de data devem vir preenchidos com o período resolvido no servidor.
+    hoje = date.today()
+    inicio_mes = hoje.replace(day=1).strftime("%Y-%m-%d")
+    assert inicio_mes.encode() in resposta.data
+
+
+def test_api_dashboard_resumo_filtra_por_intervalo_de_datas(app, db, client):
     hoje = date.today()
     ha_sessenta_dias = hoje - timedelta(days=60)
 
-    _, orcamento_este_mes = _criar_cliente_com_orcamento(db, "Cliente Este Mes", data_solicitacao=hoje)
-    _, orcamento_ha_2_meses = _criar_cliente_com_orcamento(db, "Cliente Ha Meses", data_solicitacao=ha_sessenta_dias)
+    _criar_cliente_com_orcamento(db, "Cliente Recente", data_solicitacao=hoje)
+    _criar_cliente_com_orcamento(db, "Cliente Antigo", data_solicitacao=ha_sessenta_dias)
 
-    resposta = client.get("/orcamentos?periodo=mes_atual")
-
-    assert resposta.status_code == 200
-    assert orcamento_este_mes.codigo.encode() in resposta.data
-    assert orcamento_ha_2_meses.codigo.encode() not in resposta.data
-
-
-def test_orcamentos_lista_atalho_mes_anterior(app, db, client):
-    hoje = date.today()
-    primeiro_dia_mes_atual = hoje.replace(day=1)
-    ultimo_dia_mes_anterior = primeiro_dia_mes_atual - timedelta(days=1)
-
-    _, orcamento_mes_anterior = _criar_cliente_com_orcamento(
-        db, "Cliente Mes Anterior", data_solicitacao=ultimo_dia_mes_anterior
-    )
-    _, orcamento_este_mes = _criar_cliente_com_orcamento(db, "Cliente Este Mes", data_solicitacao=hoje)
-
-    resposta = client.get("/orcamentos?periodo=mes_anterior")
+    data_inicio = hoje.replace(day=1).strftime("%Y-%m-%d")
+    resposta = client.get(f"/api/dashboard/resumo?data_inicio={data_inicio}")
+    dados = resposta.get_json()
 
     assert resposta.status_code == 200
-    assert orcamento_mes_anterior.codigo.encode() in resposta.data
-    assert orcamento_este_mes.codigo.encode() not in resposta.data
+    assert dados["total_orcamentos"] == 1
