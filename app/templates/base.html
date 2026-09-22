@@ -5,13 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}MGT Sys{% endblock %} · MGT Presentes Personalizados</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32.png') }}">
+    <link rel="icon" type="image/png" sizes="64x64" href="{{ url_for('static', filename='img/favicon-64.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
 </head>
 <body>
     <a class="skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a>
 
     <header class="cabecalho" role="banner">
         <div class="container cabecalho__conteudo">
-            <a href="{{ url_for('web.index') }}" class="marca">MGT Sys</a>
+            <a href="{{ url_for('web.index') }}" class="marca">
+                <img src="{{ url_for('static', filename='img/logo-mgt.png') }}" alt="" class="marca__logo">
+                <span>MGT Sys</span>
+            </a>
             <nav aria-label="Navegação principal">
                 <ul class="menu">
                     <li><a href="{{ url_for('web.index') }}">Início</a></li>

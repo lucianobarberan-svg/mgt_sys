@@ -2,8 +2,13 @@
 {% block title %}Início{% endblock %}
 
 {% block conteudo %}
-<h1>Painel MGT Presentes Personalizados</h1>
-<p>Sistema de gestão de clientes e orçamentos de produtos personalizados: canecas, chaveiros, canetas, copos, descansos de mouse, quebra-cabeças, camisetas, bonés, chinelos, azulejos, ecobags, garrafas e outros itens sob encomenda.</p>
+<div class="cabecalho-pagina">
+    <img src="{{ url_for('static', filename='img/logo-mgt.png') }}" alt="Logotipo da MGT Presentes Personalizados" class="logo-hero">
+    <div>
+        <h1>Painel MGT Presentes Personalizados</h1>
+        <p>Sistema de gestão de clientes e orçamentos de produtos personalizados: canecas, chaveiros, canetas, copos, descansos de mouse, quebra-cabeças, camisetas, bonés, chinelos, azulejos, ecobags, garrafas e outros itens sob encomenda.</p>
+    </div>
+</div>
 
 <section class="grade-cartoes" aria-label="Resumo geral">
     <div class="cartao estatistica">
