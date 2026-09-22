@@ -54,6 +54,18 @@ mgt_sys/
 
 ## Como rodar localmente
 
+### Windows (jeito mais simples)
+
+Dê duplo clique em **`iniciar_mgt.bat`**. Na primeira vez, ele instala tudo o que é
+necessário automaticamente (pode levar cerca de um minuto); nas próximas vezes, abre
+direto. O navegador abre sozinho em `http://127.0.0.1:5000`. Para fechar o sistema, basta
+fechar a janela preta que abriu.
+
+Dica: clique com o botão direito em `iniciar_mgt.bat` → **Enviar para → Área de trabalho
+(criar atalho)** para ter um ícone no Desktop que abre o sistema com um clique.
+
+### Manualmente (Windows/Mac/Linux)
+
 ```bash
 # 1. Criar e ativar um ambiente virtual (recomendado)
 python3 -m venv .venv
