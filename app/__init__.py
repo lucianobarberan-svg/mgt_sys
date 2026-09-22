@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask
+from flask import Flask, url_for
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
@@ -35,6 +35,19 @@ def create_app(config_name=None):
     def inject_globals():
         from datetime import datetime
 
-        return {"ano_atual": datetime.now().year}
+        def static_url(filename):
+            """Gera a URL do arquivo estático com um parâmetro de versão
+            baseado na data de modificação do arquivo, para que o navegador
+            sempre baixe a versão mais nova de CSS/JS/imagens depois de uma
+            atualização do sistema (em vez de usar uma cópia antiga guardada
+            em cache)."""
+            caminho = os.path.join(app.static_folder, filename)
+            try:
+                versao = int(os.path.getmtime(caminho))
+            except OSError:
+                versao = 0
+            return url_for("static", filename=filename, v=versao)
+
+        return {"ano_atual": datetime.now().year, "static_url": static_url}
 
     return app
