@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ "Editar item de estoque" if item else "Novo item de estoque" }}{% endblock %}
+
+{% block conteudo %}
+{% set dados = form if form is not none else item %}
+<h1>{{ "Editar item de estoque" if item else "Novo item de estoque" }}</h1>
+
+{% if not item and not tipos_produto %}
+<p class="vazio">Todos os tipos de produto já têm um item de estoque cadastrado. <a href="{{ url_for('web.estoque_lista') }}">Voltar para o estoque</a>.</p>
+{% else %}
+<form method="post" novalidate>
+    <div class="campo">
+        <label for="tipo_produto">Tipo de produto <span aria-hidden="true">*</span></label>
+        {% if item %}
+        <input type="text" id="tipo_produto" value="{{ item.tipo_produto }}" disabled>
+        <span class="dica">O tipo de produto não pode ser alterado depois de criado.</span>
+        {% else %}
+        <select id="tipo_produto" name="tipo_produto" required>
+            <option value="">Selecione o produto</option>
+            {% for tipo in tipos_produto %}
+            <option value="{{ tipo }}" {% if dados and dados.tipo_produto == tipo %}selected{% endif %}>{{ tipo }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+    </div>
+
+    <div class="linha-campos">
+        <div class="campo">
+            <label for="custo_unitario">Custo unitário — quanto você paga por unidade (R$) <span aria-hidden="true">*</span></label>
+            <input type="number" id="custo_unitario" name="custo_unitario" min="0" step="0.01" required
+                   value="{{ dados.custo_unitario if dados and dados.custo_unitario else '' }}">
+        </div>
+        <div class="campo">
+            <label for="quantidade_em_estoque">Quantidade em estoque</label>
+            <input type="number" id="quantidade_em_estoque" name="quantidade_em_estoque" min="0" step="1"
+                   value="{{ dados.quantidade_em_estoque if dados and dados.quantidade_em_estoque else 0 }}"
+                   aria-describedby="ajuda-quantidade">
+            <span id="ajuda-quantidade" class="dica">{% if item %}Ajuste aqui quando comprar mais unidades (reposição).{% else %}Quantas unidades você já tem hoje.{% endif %}</span>
+        </div>
+        <div class="campo">
+            <label for="estoque_minimo">Estoque mínimo (opcional)</label>
+            <input type="number" id="estoque_minimo" name="estoque_minimo" min="0" step="1"
+                   value="{{ dados.estoque_minimo if dados and dados.estoque_minimo else 0 }}"
+                   aria-describedby="ajuda-minimo">
+            <span id="ajuda-minimo" class="dica">Abaixo desse número, o item aparece marcado como "Estoque baixo".</span>
+        </div>
+    </div>
+
+    <div class="acoes">
+        <button type="submit" class="botao">Salvar</button>
+        <a class="botao botao--secundario" href="{{ url_for('web.estoque_lista') }}">Cancelar</a>
+    </div>
+</form>
+{% endif %}
+{% endblock %}

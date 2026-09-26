@@ -41,6 +41,14 @@
             document.getElementById("num-orcamentos").textContent = dados.total_orcamentos;
             document.getElementById("num-valor").textContent = formatarMoeda(dados.valor_total_estimado || 0);
 
+            const financeiro = dados.financeiro || {};
+            const elLucro = document.getElementById("fin-lucro");
+            document.getElementById("fin-receita").textContent = formatarMoeda(financeiro.receita_confirmada || 0);
+            document.getElementById("fin-custo").textContent = formatarMoeda(financeiro.custo_confirmado || 0);
+            elLucro.textContent = formatarMoeda(financeiro.lucro_confirmado || 0);
+            elLucro.style.color = (financeiro.lucro_confirmado || 0) < 0 ? "var(--cor-erro)" : "var(--cor-sucesso)";
+            document.getElementById("fin-margem").textContent = `${(financeiro.margem_percentual || 0).toLocaleString("pt-BR")}%`;
+
             const rotulosStatus = Object.keys(dados.por_status);
             const valoresStatus = Object.values(dados.por_status);
             preencherAlternativaTextual("tabela-status-alt", "Orçamentos por status", dados.por_status);

@@ -28,6 +28,11 @@ STATUS_ORCAMENTO = [
     "Cancelado",
 ]
 
+# Status a partir dos quais consideramos que o pedido foi confirmado: é
+# quando o estoque é baixado e o custo passa a contar no relatório
+# financeiro do Dashboard.
+STATUS_COM_BAIXA_ESTOQUE = {"Aprovado", "Em produção", "Concluído", "Entregue"}
+
 
 class Cliente(db.Model):
     __tablename__ = "clientes"
@@ -66,6 +71,34 @@ class Cliente(db.Model):
         return f"<Cliente {self.id} {self.nome}>"
 
 
+class ItemEstoque(db.Model):
+    """Um item de estoque: o produto em branco (ex.: caneca lisa) que é
+    comprado por um custo e depois personalizado para revenda."""
+
+    __tablename__ = "itens_estoque"
+
+    id = db.Column(db.Integer, primary_key=True)
+    tipo_produto = db.Column(db.String(80), unique=True, nullable=False)
+    custo_unitario = db.Column(db.Float, nullable=False, default=0.0)
+    quantidade_em_estoque = db.Column(db.Integer, nullable=False, default=0)
+    estoque_minimo = db.Column(db.Integer, default=0)
+    atualizado_em = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "tipo_produto": self.tipo_produto,
+            "custo_unitario": self.custo_unitario,
+            "quantidade_em_estoque": self.quantidade_em_estoque,
+            "estoque_minimo": self.estoque_minimo,
+            "valor_total_em_estoque": round((self.custo_unitario or 0) * (self.quantidade_em_estoque or 0), 2),
+            "estoque_baixo": self.quantidade_em_estoque <= (self.estoque_minimo or 0),
+        }
+
+    def __repr__(self):
+        return f"<ItemEstoque {self.tipo_produto}>"
+
+
 class Orcamento(db.Model):
     __tablename__ = "orcamentos"
 
@@ -73,8 +106,12 @@ class Orcamento(db.Model):
     codigo = db.Column(db.String(20), unique=True, nullable=False, index=True)
     cliente_id = db.Column(db.Integer, db.ForeignKey("clientes.id"), nullable=False)
     tipo_produto = db.Column(db.String(80), nullable=False)
+    quantidade = db.Column(db.Integer, nullable=False, default=1)
     descricao = db.Column(db.Text)
     valor_estimado = db.Column(db.Float)
+    custo_unitario_produto = db.Column(db.Float)
+    custo_personalizacao = db.Column(db.Float)
+    estoque_baixado = db.Column(db.Boolean, nullable=False, default=False)
     status = db.Column(db.String(30), nullable=False, default="Solicitado")
     data_solicitacao = db.Column(db.DateTime, default=datetime.now)
     prazo_entrega = db.Column(db.Date)
@@ -86,6 +123,15 @@ class Orcamento(db.Model):
         proximo_numero = (ultimo.id + 1) if ultimo else 1
         return f"ORC-{proximo_numero:04d}"
 
+    @property
+    def custo_total(self):
+        custo_produto = (self.custo_unitario_produto or 0) * (self.quantidade or 1)
+        return round(custo_produto + (self.custo_personalizacao or 0), 2)
+
+    @property
+    def lucro_liquido(self):
+        return round((self.valor_estimado or 0) - self.custo_total, 2)
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -93,8 +139,13 @@ class Orcamento(db.Model):
             "cliente_id": self.cliente_id,
             "cliente_nome": self.cliente.nome if self.cliente else None,
             "tipo_produto": self.tipo_produto,
+            "quantidade": self.quantidade,
             "descricao": self.descricao,
             "valor_estimado": self.valor_estimado,
+            "custo_unitario_produto": self.custo_unitario_produto,
+            "custo_personalizacao": self.custo_personalizacao,
+            "custo_total": self.custo_total,
+            "lucro_liquido": self.lucro_liquido,
             "status": self.status,
             "data_solicitacao": self.data_solicitacao.strftime("%d/%m/%Y") if self.data_solicitacao else None,
             "prazo_entrega": self.prazo_entrega.strftime("%d/%m/%Y") if self.prazo_entrega else None,

@@ -30,6 +30,7 @@ def create_app(config_name=None):
         from app import models  # noqa: F401
 
         db.create_all()
+        _atualizar_esquema_banco()
 
     @app.context_processor
     def inject_globals():
@@ -51,3 +52,33 @@ def create_app(config_name=None):
         return {"ano_atual": datetime.now().year, "static_url": static_url}
 
     return app
+
+
+def _atualizar_esquema_banco():
+    """Adiciona colunas novas a um banco de dados já existente, sem apagar
+    os dados que já estão lá.
+
+    db.create_all() só cria tabelas que ainda não existem — quando o
+    modelo ganha uma coluna nova numa tabela que o usuário já tem em
+    produção (como aconteceu ao adicionar o controle de estoque e custos
+    aos orçamentos), é preciso adicionar essa coluna manualmente, senão o
+    sistema continua rodando com o banco antigo e quebra ao tentar ler a
+    coluna nova."""
+    from sqlalchemy import text
+
+    colunas_novas_orcamentos = {
+        "quantidade": "INTEGER NOT NULL DEFAULT 1",
+        "custo_unitario_produto": "REAL",
+        "custo_personalizacao": "REAL",
+        "estoque_baixado": "BOOLEAN NOT NULL DEFAULT 0",
+    }
+
+    with db.engine.connect() as conexao:
+        resultado = conexao.execute(text("PRAGMA table_info(orcamentos)"))
+        colunas_existentes = {linha[1] for linha in resultado}
+
+        for nome, definicao_sql in colunas_novas_orcamentos.items():
+            if nome not in colunas_existentes:
+                conexao.execute(text(f"ALTER TABLE orcamentos ADD COLUMN {nome} {definicao_sql}"))
+
+        conexao.commit()

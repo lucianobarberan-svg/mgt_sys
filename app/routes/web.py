@@ -3,9 +3,64 @@ from datetime import date, datetime, timedelta
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from app import db
-from app.models import STATUS_ORCAMENTO, TIPOS_PRODUTO, Cliente, Orcamento
+from app.models import (
+    STATUS_COM_BAIXA_ESTOQUE,
+    STATUS_ORCAMENTO,
+    TIPOS_PRODUTO,
+    Cliente,
+    ItemEstoque,
+    Orcamento,
+)
 
 web_bp = Blueprint("web", __name__)
+
+
+def _parse_quantidade(valor_bruto):
+    """Converte o campo "quantidade" do formulário em um inteiro >= 1.
+    Vazio vira 1 (padrão); qualquer valor inválido vira None (erro)."""
+    valor_bruto = (valor_bruto or "").strip()
+    if not valor_bruto:
+        return 1
+    try:
+        quantidade = int(valor_bruto)
+    except ValueError:
+        return None
+    return quantidade if quantidade >= 1 else None
+
+
+def _aplicar_movimentacao_estoque(orcamento):
+    """Dá baixa no estoque na primeira vez que o orçamento chega a um
+    status confirmado (Aprovado, Em produção, Concluído ou Entregue), e
+    devolve a quantidade ao estoque se o orçamento for cancelado depois de
+    já ter baixado. Também trava o custo unitário do produto (o valor
+    atual do item no estoque) no orçamento nesse momento, para que o
+    relatório financeiro do Dashboard reflita o custo da época da baixa,
+    mesmo que o custo do item mude depois."""
+    item = ItemEstoque.query.filter_by(tipo_produto=orcamento.tipo_produto).first()
+    quantidade = orcamento.quantidade or 1
+
+    deve_baixar = orcamento.status in STATUS_COM_BAIXA_ESTOQUE
+    if deve_baixar and not orcamento.estoque_baixado:
+        if item:
+            item.quantidade_em_estoque -= quantidade
+            orcamento.custo_unitario_produto = item.custo_unitario
+            if item.quantidade_em_estoque < 0:
+                flash(
+                    f"Atenção: o estoque de \"{orcamento.tipo_produto}\" ficou negativo "
+                    f"({item.quantidade_em_estoque} un.). Confira a quantidade cadastrada em Estoque.",
+                    "erro",
+                )
+        else:
+            flash(
+                f"Não há item de estoque cadastrado para \"{orcamento.tipo_produto}\" — "
+                "cadastre em Estoque para o custo entrar automaticamente no relatório financeiro.",
+                "erro",
+            )
+        orcamento.estoque_baixado = True
+    elif orcamento.status == "Cancelado" and orcamento.estoque_baixado:
+        if item:
+            item.quantidade_em_estoque += quantidade
+        orcamento.estoque_baixado = False
 
 
 def _resolver_intervalo_datas(args):
@@ -155,14 +210,20 @@ def orcamentos_lista():
 def orcamentos_novo():
     clientes = Cliente.query.order_by(Cliente.nome).all()
 
+    itens_estoque = {item.tipo_produto: item for item in ItemEstoque.query.all()}
+
     if request.method == "POST":
         cliente_id = request.form.get("cliente_id")
         tipo_produto = request.form.get("tipo_produto", "").strip()
+        quantidade = _parse_quantidade(request.form.get("quantidade", ""))
+
         erro = None
         if not cliente_id:
             erro = "Selecione um cliente."
         elif not tipo_produto:
             erro = "Selecione o tipo de produto."
+        elif quantidade is None:
+            erro = "Quantidade inválida — informe um número inteiro maior que zero."
 
         if erro:
             flash(erro, "erro")
@@ -173,6 +234,7 @@ def orcamentos_novo():
                 clientes=clientes,
                 tipos_produto=TIPOS_PRODUTO,
                 status_opcoes=STATUS_ORCAMENTO,
+                itens_estoque=itens_estoque,
             )
 
         prazo_entrega = request.form.get("prazo_entrega") or None
@@ -183,16 +245,23 @@ def orcamentos_novo():
         if valor_estimado:
             valor_estimado = float(valor_estimado.replace(",", "."))
 
+        custo_personalizacao = request.form.get("custo_personalizacao") or None
+        if custo_personalizacao:
+            custo_personalizacao = float(custo_personalizacao.replace(",", "."))
+
         orcamento = Orcamento(
             codigo=Orcamento.gerar_codigo(),
             cliente_id=int(cliente_id),
             tipo_produto=tipo_produto,
+            quantidade=quantidade,
             descricao=request.form.get("descricao", "").strip() or None,
             valor_estimado=valor_estimado,
+            custo_personalizacao=custo_personalizacao,
             status=request.form.get("status") or "Solicitado",
             prazo_entrega=prazo_entrega,
         )
         db.session.add(orcamento)
+        _aplicar_movimentacao_estoque(orcamento)
         db.session.commit()
         flash(f"Orçamento {orcamento.codigo} cadastrado com sucesso.", "sucesso")
         return redirect(url_for("web.orcamentos_lista"))
@@ -204,6 +273,7 @@ def orcamentos_novo():
         clientes=clientes,
         tipos_produto=TIPOS_PRODUTO,
         status_opcoes=STATUS_ORCAMENTO,
+        itens_estoque=itens_estoque,
     )
 
 
@@ -211,15 +281,20 @@ def orcamentos_novo():
 def orcamentos_editar(orcamento_id):
     orcamento = Orcamento.query.get_or_404(orcamento_id)
     clientes = Cliente.query.order_by(Cliente.nome).all()
+    itens_estoque = {item.tipo_produto: item for item in ItemEstoque.query.all()}
 
     if request.method == "POST":
         cliente_id = request.form.get("cliente_id")
         tipo_produto = request.form.get("tipo_produto", "").strip()
+        quantidade = _parse_quantidade(request.form.get("quantidade", ""))
+
         erro = None
         if not cliente_id:
             erro = "Selecione um cliente."
         elif not tipo_produto:
             erro = "Selecione o tipo de produto."
+        elif quantidade is None:
+            erro = "Quantidade inválida — informe um número inteiro maior que zero."
 
         if erro:
             flash(erro, "erro")
@@ -230,6 +305,7 @@ def orcamentos_editar(orcamento_id):
                 clientes=clientes,
                 tipos_produto=TIPOS_PRODUTO,
                 status_opcoes=STATUS_ORCAMENTO,
+                itens_estoque=itens_estoque,
             )
 
         prazo_entrega = request.form.get("prazo_entrega") or None
@@ -240,12 +316,19 @@ def orcamentos_editar(orcamento_id):
         if valor_estimado:
             valor_estimado = float(valor_estimado.replace(",", "."))
 
+        custo_personalizacao = request.form.get("custo_personalizacao") or None
+        if custo_personalizacao:
+            custo_personalizacao = float(custo_personalizacao.replace(",", "."))
+
         orcamento.cliente_id = int(cliente_id)
         orcamento.tipo_produto = tipo_produto
+        orcamento.quantidade = quantidade
         orcamento.descricao = request.form.get("descricao", "").strip() or None
         orcamento.valor_estimado = valor_estimado
+        orcamento.custo_personalizacao = custo_personalizacao
         orcamento.status = request.form.get("status") or orcamento.status
         orcamento.prazo_entrega = prazo_entrega
+        _aplicar_movimentacao_estoque(orcamento)
         db.session.commit()
         flash(f"Orçamento {orcamento.codigo} atualizado com sucesso.", "sucesso")
         return redirect(url_for("web.orcamentos_lista"))
@@ -257,6 +340,7 @@ def orcamentos_editar(orcamento_id):
         clientes=clientes,
         tipos_produto=TIPOS_PRODUTO,
         status_opcoes=STATUS_ORCAMENTO,
+        itens_estoque=itens_estoque,
     )
 
 
@@ -264,10 +348,99 @@ def orcamentos_editar(orcamento_id):
 def orcamentos_excluir(orcamento_id):
     orcamento = Orcamento.query.get_or_404(orcamento_id)
     codigo = orcamento.codigo
+
+    # Se o estoque já tinha sido baixado para esse orçamento, devolve a
+    # quantidade antes de excluir — senão o item some do estoque sem volta.
+    if orcamento.estoque_baixado:
+        item = ItemEstoque.query.filter_by(tipo_produto=orcamento.tipo_produto).first()
+        if item:
+            item.quantidade_em_estoque += orcamento.quantidade or 1
+
     db.session.delete(orcamento)
     db.session.commit()
     flash(f"Orçamento {codigo} removido.", "sucesso")
     return redirect(url_for("web.orcamentos_lista"))
+
+
+@web_bp.route("/orcamentos/<int:orcamento_id>/imprimir")
+def orcamentos_imprimir(orcamento_id):
+    """Modelo de orçamento com o logo da MGT, pronto para imprimir ou
+    salvar como PDF e enviar pelo WhatsApp. Não mostra custo nem lucro —
+    só as informações que o cliente deve ver."""
+    orcamento = Orcamento.query.get_or_404(orcamento_id)
+    return render_template("orcamentos/imprimir.html", orcamento=orcamento)
+
+
+# --------------------------------------------------------------------------
+# Estoque (itens em branco usados na personalização, com custo e quantidade)
+# --------------------------------------------------------------------------
+@web_bp.route("/estoque")
+def estoque_lista():
+    itens = ItemEstoque.query.order_by(ItemEstoque.tipo_produto).all()
+    valor_total_estoque = round(sum((item.custo_unitario or 0) * (item.quantidade_em_estoque or 0) for item in itens), 2)
+    return render_template("estoque/list.html", itens=itens, valor_total_estoque=valor_total_estoque)
+
+
+@web_bp.route("/estoque/novo", methods=["GET", "POST"])
+def estoque_novo():
+    tipos_ja_cadastrados = {item.tipo_produto for item in ItemEstoque.query.all()}
+    tipos_disponiveis = [t for t in TIPOS_PRODUTO if t not in tipos_ja_cadastrados]
+
+    if request.method == "POST":
+        tipo_produto = request.form.get("tipo_produto", "").strip()
+        erro = None
+        if not tipo_produto:
+            erro = "Selecione o tipo de produto."
+        elif tipo_produto in tipos_ja_cadastrados:
+            erro = f'Já existe um item de estoque cadastrado para "{tipo_produto}".'
+
+        if erro:
+            flash(erro, "erro")
+            return render_template(
+                "estoque/form.html", item=None, form=request.form, tipos_produto=tipos_disponiveis
+            )
+
+        custo_unitario = float((request.form.get("custo_unitario") or "0").replace(",", "."))
+        quantidade_em_estoque = int(request.form.get("quantidade_em_estoque") or 0)
+        estoque_minimo = int(request.form.get("estoque_minimo") or 0)
+
+        item = ItemEstoque(
+            tipo_produto=tipo_produto,
+            custo_unitario=custo_unitario,
+            quantidade_em_estoque=quantidade_em_estoque,
+            estoque_minimo=estoque_minimo,
+        )
+        db.session.add(item)
+        db.session.commit()
+        flash(f'Item de estoque "{tipo_produto}" cadastrado com sucesso.', "sucesso")
+        return redirect(url_for("web.estoque_lista"))
+
+    return render_template("estoque/form.html", item=None, form={}, tipos_produto=tipos_disponiveis)
+
+
+@web_bp.route("/estoque/<int:item_id>/editar", methods=["GET", "POST"])
+def estoque_editar(item_id):
+    item = ItemEstoque.query.get_or_404(item_id)
+
+    if request.method == "POST":
+        item.custo_unitario = float((request.form.get("custo_unitario") or "0").replace(",", "."))
+        item.quantidade_em_estoque = int(request.form.get("quantidade_em_estoque") or 0)
+        item.estoque_minimo = int(request.form.get("estoque_minimo") or 0)
+        db.session.commit()
+        flash(f'Item de estoque "{item.tipo_produto}" atualizado com sucesso.', "sucesso")
+        return redirect(url_for("web.estoque_lista"))
+
+    return render_template("estoque/form.html", item=item, form=None, tipos_produto=[item.tipo_produto])
+
+
+@web_bp.route("/estoque/<int:item_id>/excluir", methods=["POST"])
+def estoque_excluir(item_id):
+    item = ItemEstoque.query.get_or_404(item_id)
+    tipo_produto = item.tipo_produto
+    db.session.delete(item)
+    db.session.commit()
+    flash(f'Item de estoque "{tipo_produto}" removido.', "sucesso")
+    return redirect(url_for("web.estoque_lista"))
 
 
 # --------------------------------------------------------------------------

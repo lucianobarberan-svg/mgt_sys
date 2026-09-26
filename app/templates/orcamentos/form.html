@@ -19,14 +19,21 @@
         </select>
     </div>
 
-    <div class="campo">
-        <label for="tipo_produto">Tipo de produto <span aria-hidden="true">*</span></label>
-        <select id="tipo_produto" name="tipo_produto" required>
-            <option value="">Selecione o produto</option>
-            {% for tipo in tipos_produto %}
-            <option value="{{ tipo }}" {% if dados and dados.tipo_produto == tipo %}selected{% endif %}>{{ tipo }}</option>
-            {% endfor %}
-        </select>
+    <div class="linha-campos">
+        <div class="campo">
+            <label for="tipo_produto">Tipo de produto <span aria-hidden="true">*</span></label>
+            <select id="tipo_produto" name="tipo_produto" required>
+                <option value="">Selecione o produto</option>
+                {% for tipo in tipos_produto %}
+                <option value="{{ tipo }}" {% if dados and dados.tipo_produto == tipo %}selected{% endif %}>{{ tipo }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="campo">
+            <label for="quantidade">Quantidade</label>
+            <input type="number" id="quantidade" name="quantidade" min="1" step="1"
+                   value="{{ dados.quantidade if dados and dados.quantidade else 1 }}">
+        </div>
     </div>
 
     <div class="campo">
@@ -38,17 +45,16 @@
 
     <div class="linha-campos">
         <div class="campo">
-            <label for="valor_estimado">Valor estimado (R$)</label>
+            <label for="valor_estimado">Valor de venda (R$)</label>
             <input type="number" id="valor_estimado" name="valor_estimado" min="0" step="0.01"
                    value="{{ dados.valor_estimado if dados else '' }}">
         </div>
         <div class="campo">
-            <label for="status">Status</label>
-            <select id="status" name="status">
-                {% for s in status_opcoes %}
-                <option value="{{ s }}" {% if (dados and dados.status == s) or (not dados and s == "Solicitado") %}selected{% endif %}>{{ s }}</option>
-                {% endfor %}
-            </select>
+            <label for="custo_personalizacao">Custo da personalização — tinta etc. (R$)</label>
+            <input type="number" id="custo_personalizacao" name="custo_personalizacao" min="0" step="0.01"
+                   value="{{ dados.custo_personalizacao if dados and dados.custo_personalizacao else '' }}"
+                   aria-describedby="ajuda-custo-personalizacao">
+            <span id="ajuda-custo-personalizacao" class="dica">Quanto você gastou de tinta/material para personalizar esse pedido.</span>
         </div>
         <div class="campo">
             <label for="prazo_entrega">Prazo de entrega</label>
@@ -57,10 +63,50 @@
         </div>
     </div>
 
+    <div class="campo">
+        <label for="status">Status</label>
+        <select id="status" name="status">
+            {% for s in status_opcoes %}
+            <option value="{{ s }}" {% if (dados and dados.status == s) or (not dados and s == "Solicitado") %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+        <span class="dica">A partir de "Aprovado" o sistema dá baixa no estoque do produto automaticamente.</span>
+    </div>
+
+    <div class="cartao" id="preview-financeiro" aria-live="polite">
+        <h2 style="margin-top:0;">Estimativa de custo e lucro</h2>
+        <div class="grade-cartoes" style="margin-bottom:0;">
+            <div class="estatistica">
+                <strong id="preview-custo-produto">—</strong>
+                <span>Custo do produto (estoque)</span>
+            </div>
+            <div class="estatistica">
+                <strong id="preview-custo-total">—</strong>
+                <span>Custo total (produto + personalização)</span>
+            </div>
+            <div class="estatistica">
+                <strong id="preview-lucro">—</strong>
+                <span>Lucro líquido estimado</span>
+            </div>
+        </div>
+        <p class="dica" style="margin-bottom:0;">Estimativa com base no custo atual do item em <a href="{{ url_for('web.estoque_lista') }}">Estoque</a>. O valor definitivo é travado quando o orçamento passa para "Aprovado".</p>
+    </div>
+
     <div class="acoes">
         <button type="submit" class="botao">Salvar</button>
         <a class="botao botao--secundario" href="{{ url_for('web.orcamentos_lista') }}">Cancelar</a>
     </div>
 </form>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.MGT_ITENS_ESTOQUE = {
+        {% for tipo, item in itens_estoque.items() %}
+        {{ tipo|tojson }}: {{ item.custo_unitario|tojson }}{{ "," if not loop.last }}
+        {% endfor %}
+    };
+</script>
+<script src="{{ static_url('js/orcamento_form.js') }}"></script>
 {% endblock %}

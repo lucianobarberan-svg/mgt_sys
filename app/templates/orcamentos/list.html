@@ -44,6 +44,7 @@
             <th scope="col">Cliente</th>
             <th scope="col">Produto</th>
             <th scope="col">Valor estimado</th>
+            <th scope="col">Lucro</th>
             <th scope="col">Status</th>
             <th scope="col">Solicitado em</th>
             <th scope="col">Ações</th>
@@ -56,9 +57,17 @@
             <td>{{ o.cliente.nome }}</td>
             <td>{{ o.tipo_produto }}</td>
             <td>{{ "R$ %.2f"|format(o.valor_estimado) if o.valor_estimado else "—" }}</td>
+            <td>
+                {% if o.estoque_baixado %}
+                <span style="color: {{ 'var(--cor-sucesso)' if o.lucro_liquido >= 0 else 'var(--cor-erro)' }};">{{ "R$ %.2f"|format(o.lucro_liquido) }}</span>
+                {% else %}
+                —
+                {% endif %}
+            </td>
             <td><span class="badge">{{ o.status }}</span></td>
             <td>{{ o.data_solicitacao.strftime("%d/%m/%Y") }}</td>
             <td class="acoes">
+                <a class="botao botao--secundario" href="{{ url_for('web.orcamentos_imprimir', orcamento_id=o.id) }}">Imprimir</a>
                 <a class="botao botao--secundario" href="{{ url_for('web.orcamentos_editar', orcamento_id=o.id) }}">Editar</a>
                 <form method="post" action="{{ url_for('web.orcamentos_excluir', orcamento_id=o.id) }}" onsubmit="return confirm('Excluir o orçamento {{ o.codigo }}?');" style="display:inline;">
                     <button type="submit" class="botao botao--perigo">Excluir</button>

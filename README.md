@@ -26,10 +26,25 @@ substituindo o controle de clientes e pedidos atualmente feito em planilhas de E
 
 - Cadastro, edição, exclusão e listagem de clientes, com busca por nome direto na lista
 - Cadastro, edição, exclusão e listagem de orçamentos (vinculados a um cliente), com geração
-  automática de código (`ORC-0001`, `ORC-0002`, ...), busca por código e filtro por período
-  (data inicial/final, com atalhos para "mês atual" e "mês anterior") direto na lista
+  automática de código (`ORC-0001`, `ORC-0002`, ...), quantidade do pedido, busca por código
+  e filtro por período (data inicial/final, com atalhos para "mês atual" e "mês anterior")
+  direto na lista
 - Consulta de cliente pelo nome e de orçamento pelo código (página dedicada de consulta),
   com atalho para ver todos os orçamentos de um cliente encontrado
+- **Controle de estoque com valores**: cadastro dos produtos em branco (caneca, chaveiro
+  etc.) com custo unitário, quantidade em estoque e estoque mínimo, com aviso de "estoque
+  baixo"
+- **Custo e lucro por orçamento**: ao informar também o custo da personalização (tinta,
+  material), o sistema calcula em tempo real o custo total e o lucro líquido estimado do
+  pedido, com base no custo do produto cadastrado em Estoque
+- **Baixa automática de estoque**: quando um orçamento é aprovado (ou avança para "Em
+  produção", "Concluído" ou "Entregue"), o sistema dá baixa na quantidade usada e trava o
+  custo do produto naquele momento; se o pedido for cancelado depois, a quantidade volta
+  para o estoque
+- **Relatório de custos e lucros no Dashboard**: receita, custo e lucro confirmados, além da
+  margem de lucro, considerando apenas os orçamentos já confirmados
+- **Modelo de orçamento para WhatsApp**: página de orçamento com o logo da MGT, pronta para
+  imprimir ou salvar como PDF e enviar ao cliente pelo WhatsApp (sem mostrar custo ou lucro)
 - Dashboard com gráficos de orçamentos por status e por tipo de produto
 
 ## Estrutura do projeto

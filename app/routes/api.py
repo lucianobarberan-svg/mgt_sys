@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from flask import Blueprint, jsonify, request
 
-from app.models import Cliente, Orcamento
+from app.models import STATUS_COM_BAIXA_ESTOQUE, Cliente, ItemEstoque, Orcamento
 
 api_bp = Blueprint("api", __name__)
 
@@ -86,11 +86,26 @@ def api_dashboard_resumo():
     por_tipo = {}
     valor_total = 0.0
 
+    # O relatório de custo/lucro só considera orçamentos confirmados (a
+    # partir de "Aprovado"), pois é aí que o custo do produto é travado a
+    # partir do estoque — um orçamento "Solicitado" ainda não tem custo real.
+    receita_confirmada = 0.0
+    custo_confirmado = 0.0
+    lucro_por_tipo = {}
+
     for o in orcamentos:
         por_status[o.status] = por_status.get(o.status, 0) + 1
         por_tipo[o.tipo_produto] = por_tipo.get(o.tipo_produto, 0) + 1
         if o.valor_estimado:
             valor_total += o.valor_estimado
+
+        if o.status in STATUS_COM_BAIXA_ESTOQUE:
+            receita_confirmada += o.valor_estimado or 0
+            custo_confirmado += o.custo_total
+            lucro_por_tipo[o.tipo_produto] = lucro_por_tipo.get(o.tipo_produto, 0) + o.lucro_liquido
+
+    lucro_confirmado = receita_confirmada - custo_confirmado
+    margem_percentual = round((lucro_confirmado / receita_confirmada * 100), 1) if receita_confirmada else 0.0
 
     return jsonify(
         {
@@ -99,5 +114,28 @@ def api_dashboard_resumo():
             "valor_total_estimado": round(valor_total, 2),
             "por_status": por_status,
             "por_tipo_produto": por_tipo,
+            "financeiro": {
+                "receita_confirmada": round(receita_confirmada, 2),
+                "custo_confirmado": round(custo_confirmado, 2),
+                "lucro_confirmado": round(lucro_confirmado, 2),
+                "margem_percentual": margem_percentual,
+                "lucro_por_tipo_produto": {k: round(v, 2) for k, v in lucro_por_tipo.items()},
+            },
+        }
+    )
+
+
+# --------------------------------------------------------------------------
+# Estoque
+# --------------------------------------------------------------------------
+@api_bp.route("/estoque/resumo", methods=["GET"])
+def api_estoque_resumo():
+    itens = ItemEstoque.query.all()
+    valor_total = sum((i.custo_unitario or 0) * (i.quantidade_em_estoque or 0) for i in itens)
+    itens_estoque_baixo = [i.tipo_produto for i in itens if i.quantidade_em_estoque <= (i.estoque_minimo or 0)]
+    return jsonify(
+        {
+            "valor_total_em_estoque": round(valor_total, 2),
+            "itens_estoque_baixo": itens_estoque_baixo,
         }
     )

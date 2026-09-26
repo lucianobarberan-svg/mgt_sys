@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Estoque{% endblock %}
+
+{% block conteudo %}
+<div class="acoes" style="justify-content: space-between; margin-bottom: 1.25rem;">
+    <h1>Estoque</h1>
+    <a class="botao" href="{{ url_for('web.estoque_novo') }}">+ Novo item de estoque</a>
+</div>
+
+<section class="grade-cartoes" aria-label="Resumo do estoque">
+    <div class="cartao estatistica">
+        <strong>{{ itens|length }}</strong>
+        <span>Item(ns) de produto cadastrado(s)</span>
+    </div>
+    <div class="cartao estatistica">
+        <strong>{{ "R$ %.2f"|format(valor_total_estoque) }}</strong>
+        <span>Valor total investido em estoque</span>
+    </div>
+</section>
+
+{% if itens %}
+<table>
+    <caption>Itens de estoque ({{ itens|length }})</caption>
+    <thead>
+        <tr>
+            <th scope="col">Produto</th>
+            <th scope="col">Custo unitário</th>
+            <th scope="col">Quantidade em estoque</th>
+            <th scope="col">Estoque mínimo</th>
+            <th scope="col">Valor total</th>
+            <th scope="col">Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in itens %}
+        <tr>
+            <td>{{ item.tipo_produto }}</td>
+            <td>{{ "R$ %.2f"|format(item.custo_unitario) }}</td>
+            <td>
+                {{ item.quantidade_em_estoque }}
+                {% if item.quantidade_em_estoque <= (item.estoque_minimo or 0) %}
+                <span class="badge" style="background: var(--cor-erro-fundo); color: var(--cor-erro); border-color: var(--cor-erro);">Estoque baixo</span>
+                {% endif %}
+            </td>
+            <td>{{ item.estoque_minimo or 0 }}</td>
+            <td>{{ "R$ %.2f"|format(item.custo_unitario * item.quantidade_em_estoque) }}</td>
+            <td class="acoes">
+                <a class="botao botao--secundario" href="{{ url_for('web.estoque_editar', item_id=item.id) }}">Editar</a>
+                <form method="post" action="{{ url_for('web.estoque_excluir', item_id=item.id) }}" onsubmit="return confirm('Excluir o item de estoque {{ item.tipo_produto }}?');" style="display:inline;">
+                    <button type="submit" class="botao botao--perigo">Excluir</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="vazio">Nenhum item de estoque cadastrado ainda. <a href="{{ url_for('web.estoque_novo') }}">Cadastrar o primeiro item</a>.</p>
+{% endif %}
+{% endblock %}
