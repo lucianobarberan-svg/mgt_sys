@@ -41,7 +41,7 @@ class Cliente(db.Model):
     bairro = db.Column(db.String(100))
     cidade = db.Column(db.String(100))
     uf = db.Column(db.String(2))
-    data_cadastro = db.Column(db.DateTime, default=datetime.utcnow)
+    data_cadastro = db.Column(db.DateTime, default=datetime.now)
 
     orcamentos = db.relationship(
         "Orcamento", backref="cliente", lazy=True, cascade="all, delete-orphan"
@@ -76,7 +76,7 @@ class Orcamento(db.Model):
     descricao = db.Column(db.Text)
     valor_estimado = db.Column(db.Float)
     status = db.Column(db.String(30), nullable=False, default="Solicitado")
-    data_solicitacao = db.Column(db.DateTime, default=datetime.utcnow)
+    data_solicitacao = db.Column(db.DateTime, default=datetime.now)
     prazo_entrega = db.Column(db.Date)
 
     @staticmethod
