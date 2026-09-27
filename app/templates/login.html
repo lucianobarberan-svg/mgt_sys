@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Entrar{% endblock %}
+
+{% block conteudo %}
+<div class="login-central">
+    <section class="cartao login-cartao">
+        <h1>Entrar no MGT Sys</h1>
+        <p class="dica">Digite a senha do sistema para continuar.</p>
+        <form method="post" novalidate>
+            <input type="hidden" name="proximo" value="{{ proximo }}">
+            <div class="campo">
+                <label for="senha">Senha</label>
+                <input type="password" id="senha" name="senha" required autofocus autocomplete="current-password">
+            </div>
+            <div class="acoes">
+                <button type="submit" class="botao">Entrar</button>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}

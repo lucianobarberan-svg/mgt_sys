@@ -1,6 +1,7 @@
+import hmac
 from datetime import date, datetime, timedelta
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 
 from app import db
 from app.models import (
@@ -150,6 +151,35 @@ def _resolver_intervalo_datas(args):
         data_fim = ultimo_dia_mes_anterior.strftime("%Y-%m-%d")
 
     return data_inicio, data_fim
+
+
+# --------------------------------------------------------------------------
+# Login (protege o sistema quando publicado na internet)
+# --------------------------------------------------------------------------
+@web_bp.route("/login", methods=["GET", "POST"])
+def login():
+    senha_configurada = current_app.config.get("SITE_PASSWORD")
+    proximo = request.args.get("proximo") or request.form.get("proximo") or url_for("web.index")
+
+    if not senha_configurada:
+        # Sem senha configurada no ambiente (ex.: desenvolvimento local),
+        # não existe tela de login — segue direto pro sistema.
+        return redirect(proximo)
+
+    if request.method == "POST":
+        senha_informada = request.form.get("senha", "")
+        if hmac.compare_digest(senha_informada, senha_configurada):
+            session["autenticado"] = True
+            return redirect(proximo)
+        flash("Senha incorreta.", "erro")
+
+    return render_template("login.html", proximo=proximo)
+
+
+@web_bp.route("/logout", methods=["POST"])
+def logout():
+    session.pop("autenticado", None)
+    return redirect(url_for("web.login"))
 
 
 # --------------------------------------------------------------------------

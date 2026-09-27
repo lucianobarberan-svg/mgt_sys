@@ -130,7 +130,17 @@ gratuito. Algumas opções:
 4. (Opcional, mais robusto) Crie um banco **PostgreSQL** gratuito no próprio Render e
    defina a variável de ambiente `DATABASE_URL` no Web Service com a *Internal Database URL*
    fornecida — a aplicação já lê essa variável automaticamente (`config.py`).
-5. Defina também a variável `SECRET_KEY` com um valor aleatório.
+5. Defina também a variável `SECRET_KEY` com um valor aleatório (importante para a
+   segurança da sessão de login, agora que o site fica público na internet).
+6. **Proteja o site com senha**: defina a variável de ambiente `SITE_PASSWORD` com a
+   senha que os usuários vão usar para entrar no sistema. Sem essa variável configurada,
+   o sistema fica livre, sem tela de login (é o comportamento padrão em desenvolvimento
+   local). Com ela configurada, toda página e toda rota da API passam a exigir login —
+   aparece uma tela pedindo a senha antes de liberar o acesso, com um link "Sair" no menu
+   para encerrar a sessão.
+
+No painel do Render: **Settings → Environment → Add Environment Variable**, para cada
+uma das variáveis acima (`SECRET_KEY` e `SITE_PASSWORD`).
 
 ### Railway / PythonAnywhere
 

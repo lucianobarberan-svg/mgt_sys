@@ -8,6 +8,12 @@ class Config:
 
     SECRET_KEY = os.environ.get("SECRET_KEY", "mgt-presentes-chave-de-desenvolvimento")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # Senha única para entrar no sistema (protege o site quando ele está
+    # publicado na internet). Vem de uma variável de ambiente — nunca fica
+    # escrita no código, porque o repositório é público no GitHub. Se essa
+    # variável não estiver configurada, o sistema fica sem exigir login
+    # (é o caso do ambiente local de desenvolvimento, por padrão).
+    SITE_PASSWORD = os.environ.get("SITE_PASSWORD")
 
 
 class DevelopmentConfig(Config):
@@ -21,6 +27,9 @@ class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     WTF_CSRF_ENABLED = False
+    # Nos testes automatizados o login nunca é exigido, mesmo que a máquina
+    # que roda os testes tenha essa variável de ambiente configurada.
+    SITE_PASSWORD = None
 
 
 class ProductionConfig(Config):

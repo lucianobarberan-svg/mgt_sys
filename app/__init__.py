@@ -26,6 +26,24 @@ def create_app(config_name=None):
     app.register_blueprint(web_bp)
     app.register_blueprint(api_bp, url_prefix="/api")
 
+    @app.before_request
+    def _exigir_login():
+        """Se houver uma senha configurada (SITE_PASSWORD), exige login para
+        qualquer página ou rota da API — protege o sistema quando ele está
+        publicado na internet. Sem essa variável configurada (padrão no
+        desenvolvimento local), o sistema segue livre, sem tela de login."""
+        from flask import redirect, request, session, url_for
+
+        senha_configurada = app.config.get("SITE_PASSWORD")
+        if not senha_configurada:
+            return None
+
+        endpoint_liberado = request.endpoint in ("web.login", "static") or request.endpoint is None
+        if endpoint_liberado or session.get("autenticado"):
+            return None
+
+        return redirect(url_for("web.login", proximo=request.path))
+
     with app.app_context():
         from app import models  # noqa: F401
 

@@ -26,6 +26,13 @@
                     <li><a href="{{ url_for('web.estoque_lista') }}">Estoque</a></li>
                     <li><a href="{{ url_for('web.consulta') }}">Consulta</a></li>
                     <li><a href="{{ url_for('web.dashboard') }}">Dashboard</a></li>
+                    {% if session.get('autenticado') %}
+                    <li>
+                        <form method="post" action="{{ url_for('web.logout') }}" style="display:inline;">
+                            <button type="submit" class="botao-sair">Sair</button>
+                        </form>
+                    </li>
+                    {% endif %}
                 </ul>
             </nav>
         </div>

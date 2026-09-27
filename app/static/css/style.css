@@ -464,3 +464,27 @@ legend {
         border-color: #e3c589;
     }
 }
+
+.login-central {
+    display: flex;
+    justify-content: center;
+    padding-top: 3rem;
+}
+.login-cartao {
+    max-width: 360px;
+    width: 100%;
+}
+.login-cartao h1 {
+    margin-top: 0;
+}
+.botao-sair {
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    padding: 0;
+}
+.botao-sair:hover {
+    text-decoration: underline;
+}
