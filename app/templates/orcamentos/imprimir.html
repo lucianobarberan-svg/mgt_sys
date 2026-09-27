@@ -4,7 +4,13 @@
 {% block conteudo %}
 <div class="acoes acoes-nao-imprimir" style="justify-content: space-between; margin-bottom: 1.25rem;">
     <a class="botao botao--secundario" href="{{ url_for('web.orcamentos_lista') }}">&larr; Voltar</a>
-    <button type="button" class="botao" onclick="window.print()">Imprimir / Salvar como PDF</button>
+    <div class="acoes" style="margin-bottom: 0;">
+        <a class="botao" style="background: var(--cor-sucesso); display: inline-flex; align-items: center; gap: 0.5rem;" href="{{ orcamento.whatsapp_url }}" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 14 20 9 15 4"/><path d="M4 20v-7a4 4 0 0 1 4-4h12"/></svg>
+            Compartilhar no WhatsApp
+        </a>
+        <button type="button" class="botao" onclick="window.print()">Imprimir / Salvar como PDF</button>
+    </div>
 </div>
 
 <article class="orcamento-imprimir cartao">

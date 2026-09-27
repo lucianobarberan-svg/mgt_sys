@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from urllib.parse import quote
 
 from app import db
 
@@ -131,6 +132,36 @@ class Orcamento(db.Model):
     @property
     def lucro_liquido(self):
         return round((self.valor_estimado or 0) - self.custo_total, 2)
+
+    @property
+    def mensagem_whatsapp(self):
+        """Texto pronto para compartilhar o orçamento pelo WhatsApp — sem
+        nenhum dado de custo ou lucro, só o que o cliente deve ver."""
+        linhas = [
+            f"Orçamento {self.codigo} — MGT Presentes Personalizados",
+            f"Cliente: {self.cliente.nome}" if self.cliente else None,
+            f"Produto: {self.tipo_produto} (quantidade: {self.quantidade or 1})",
+            (
+                f"Valor: R$ {self.valor_estimado:.2f}".replace(".", ",")
+                if self.valor_estimado
+                else "Valor: a combinar"
+            ),
+            f"Prazo de entrega: {self.prazo_entrega.strftime('%d/%m/%Y')}" if self.prazo_entrega else None,
+            f"Status: {self.status}",
+        ]
+        return "\n".join(linha for linha in linhas if linha)
+
+    @property
+    def whatsapp_url(self):
+        """Link "clique para conversar" do WhatsApp (wa.me) já com a
+        mensagem do orçamento preenchida. Se o cliente tiver telefone
+        cadastrado, abre a conversa direto com ele; senão, abre o seletor
+        de contato do WhatsApp com a mensagem pronta para colar."""
+        numero = "".join(c for c in (self.cliente.telefone or "") if c.isdigit()) if self.cliente else ""
+        if numero and not numero.startswith("55"):
+            numero = "55" + numero
+        mensagem = quote(self.mensagem_whatsapp)
+        return f"https://wa.me/{numero}?text={mensagem}"
 
     def to_dict(self):
         return {

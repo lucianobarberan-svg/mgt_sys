@@ -247,6 +247,15 @@ td.data-tabela {
     background: var(--cor-erro-fundo);
     border-color: var(--cor-erro);
 }
+.botao-icone--whatsapp {
+    color: var(--cor-sucesso);
+    border-color: #bfe3c6;
+}
+.botao-icone--whatsapp:hover,
+.botao-icone--whatsapp:focus {
+    background: var(--cor-sucesso-fundo);
+    border-color: var(--cor-sucesso);
+}
 
 .botao {
     display: inline-block;
@@ -411,5 +420,14 @@ legend {
     .botao-icone--perigo:focus {
         background: #3a1414;
         border-color: #f3a9a9;
+    }
+    .botao-icone--whatsapp {
+        color: #a8e6b4;
+        border-color: #1e5b2f;
+    }
+    .botao-icone--whatsapp:hover,
+    .botao-icone--whatsapp:focus {
+        background: #1e3a24;
+        border-color: #a8e6b4;
     }
 }

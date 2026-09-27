@@ -277,6 +277,20 @@ def test_orcamentos_imprimir_carrega_e_nao_mostra_custo(app, db, client):
     assert b"25.00" not in resposta.data  # custo_total
     assert "Custo".encode() not in resposta.data
     assert "Lucro".encode() not in resposta.data
+    # Botão de compartilhar pelo WhatsApp, com a mensagem já pronta.
+    assert b"wa.me" in resposta.data
+    assert "Compartilhar no WhatsApp".encode() in resposta.data
+
+
+def test_orcamentos_lista_mostra_link_whatsapp(app, db, client):
+    cliente = _criar_cliente(db)
+    orcamento = Orcamento(codigo=Orcamento.gerar_codigo(), cliente_id=cliente.id, tipo_produto="Caneca personalizada")
+    db.session.add(orcamento)
+    db.session.commit()
+
+    resposta = client.get("/orcamentos")
+
+    assert b"wa.me" in resposta.data
 
 
 # --------------------------------------------------------------------------
