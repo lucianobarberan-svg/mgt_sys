@@ -22,6 +22,15 @@
 </section>
 
 <section class="cartao">
+    <h2>Atalhos</h2>
+    <div class="acoes">
+        <a class="botao" href="{{ url_for('web.clientes_novo') }}">+ Novo cliente</a>
+        <a class="botao" href="{{ url_for('web.orcamentos_novo') }}">+ Novo orçamento</a>
+        <a class="botao botao--secundario" href="{{ url_for('web.consulta') }}">Consultar cliente/orçamento</a>
+    </div>
+</section>
+
+<section class="cartao">
     <h2>Orçamentos recentes</h2>
     {% if orcamentos_recentes %}
     <table>
@@ -50,14 +59,5 @@
     {% else %}
     <p class="vazio">Nenhum orçamento cadastrado ainda. <a href="{{ url_for('web.orcamentos_novo') }}">Cadastrar o primeiro orçamento</a>.</p>
     {% endif %}
-</section>
-
-<section class="cartao">
-    <h2>Atalhos</h2>
-    <div class="acoes">
-        <a class="botao" href="{{ url_for('web.clientes_novo') }}">+ Novo cliente</a>
-        <a class="botao" href="{{ url_for('web.orcamentos_novo') }}">+ Novo orçamento</a>
-        <a class="botao botao--secundario" href="{{ url_for('web.consulta') }}">Consultar cliente/orçamento</a>
-    </div>
 </section>
 {% endblock %}
