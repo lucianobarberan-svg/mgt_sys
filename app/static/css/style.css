@@ -27,7 +27,7 @@ body {
 }
 
 .container {
-    max-width: 1000px;
+    max-width: 1180px;
     margin: 0 auto;
     padding: 0 1.25rem;
 }
@@ -165,6 +165,12 @@ h1, h2, h3 {
     color: var(--cor-primaria-escura);
 }
 
+.tabela-responsiva {
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+    border-radius: 10px;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -177,11 +183,20 @@ caption {
 }
 th, td {
     text-align: left;
-    padding: 0.6rem 0.75rem;
+    padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--cor-borda);
+    vertical-align: middle;
 }
 th {
     background: var(--cor-fundo-alt);
+    white-space: nowrap;
+}
+td.valor-monetario {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+td.data-tabela {
+    white-space: nowrap;
 }
 
 .acoes {
@@ -189,6 +204,48 @@ th {
     align-items: center;
     gap: 0.5rem;
     flex-wrap: wrap;
+}
+
+.acoes-icones {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: nowrap;
+}
+
+.botao-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    flex-shrink: 0;
+    border-radius: 6px;
+    border: 1px solid var(--cor-borda);
+    background: var(--cor-fundo);
+    color: var(--cor-primaria-escura);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+.botao-icone svg {
+    width: 18px;
+    height: 18px;
+}
+.botao-icone:hover,
+.botao-icone:focus {
+    background: var(--cor-fundo-alt);
+    border-color: var(--cor-primaria-escura);
+}
+.botao-icone--perigo {
+    color: var(--cor-erro);
+    border-color: #e3b8b8;
+}
+.botao-icone--perigo:hover,
+.botao-icone--perigo:focus {
+    background: var(--cor-erro-fundo);
+    border-color: var(--cor-erro);
 }
 
 .botao {
@@ -335,5 +392,24 @@ legend {
         background: #10201f;
         color: #eaf3f1;
         border-color: #34504c;
+    }
+    .botao-icone {
+        background: transparent;
+        border-color: #34504c;
+        color: #eaf3f1;
+    }
+    .botao-icone:hover,
+    .botao-icone:focus {
+        background: #1f3a37;
+        border-color: #eaf3f1;
+    }
+    .botao-icone--perigo {
+        color: #f3a9a9;
+        border-color: #5a1414;
+    }
+    .botao-icone--perigo:hover,
+    .botao-icone--perigo:focus {
+        background: #3a1414;
+        border-color: #f3a9a9;
     }
 }

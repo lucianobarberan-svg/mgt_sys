@@ -30,6 +30,7 @@
 </form>
 
 {% if orcamentos %}
+<div class="tabela-responsiva">
 <table>
     <caption>
         {% if codigo_busca or cliente_id %}
@@ -47,6 +48,7 @@
             <th scope="col">Lucro</th>
             <th scope="col">Status</th>
             <th scope="col">Solicitado em</th>
+            <th scope="col">Entrega prevista</th>
             <th scope="col">Ações</th>
         </tr>
     </thead>
@@ -56,8 +58,8 @@
             <td>{{ o.codigo }}</td>
             <td>{{ o.cliente.nome }}</td>
             <td>{{ o.tipo_produto }}</td>
-            <td>{{ "R$ %.2f"|format(o.valor_estimado) if o.valor_estimado else "—" }}</td>
-            <td>
+            <td class="valor-monetario">{{ "R$ %.2f"|format(o.valor_estimado) if o.valor_estimado else "—" }}</td>
+            <td class="valor-monetario">
                 {% if o.estoque_baixado %}
                 <span style="color: {{ 'var(--cor-sucesso)' if o.lucro_liquido >= 0 else 'var(--cor-erro)' }};">{{ "R$ %.2f"|format(o.lucro_liquido) }}</span>
                 {% else %}
@@ -65,18 +67,26 @@
                 {% endif %}
             </td>
             <td><span class="badge">{{ o.status }}</span></td>
-            <td>{{ o.data_solicitacao.strftime("%d/%m/%Y") }}</td>
-            <td class="acoes">
-                <a class="botao botao--secundario" href="{{ url_for('web.orcamentos_imprimir', orcamento_id=o.id) }}">Imprimir</a>
-                <a class="botao botao--secundario" href="{{ url_for('web.orcamentos_editar', orcamento_id=o.id) }}">Editar</a>
+            <td class="data-tabela">{{ o.data_solicitacao.strftime("%d/%m/%Y") }}</td>
+            <td class="data-tabela">{{ o.prazo_entrega.strftime("%d/%m/%Y") if o.prazo_entrega else "—" }}</td>
+            <td class="acoes acoes-icones">
+                <a class="botao-icone" href="{{ url_for('web.orcamentos_editar', orcamento_id=o.id) }}" title="Editar orçamento {{ o.codigo }}" aria-label="Editar orçamento {{ o.codigo }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                </a>
+                <a class="botao-icone" href="{{ url_for('web.orcamentos_imprimir', orcamento_id=o.id) }}" title="Imprimir orçamento {{ o.codigo }}" aria-label="Imprimir orçamento {{ o.codigo }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                </a>
                 <form method="post" action="{{ url_for('web.orcamentos_excluir', orcamento_id=o.id) }}" onsubmit="return confirm('Excluir o orçamento {{ o.codigo }}?');" style="display:inline;">
-                    <button type="submit" class="botao botao--perigo">Excluir</button>
+                    <button type="submit" class="botao-icone botao-icone--perigo" title="Excluir orçamento {{ o.codigo }}" aria-label="Excluir orçamento {{ o.codigo }}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
                 </form>
             </td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% else %}
 <p class="vazio">
     {% if codigo_busca or cliente_id %}
