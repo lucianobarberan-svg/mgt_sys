@@ -32,6 +32,7 @@ def create_app(config_name=None):
         db.create_all()
         _atualizar_esquema_banco()
         _migrar_orcamentos_para_itens()
+        _remover_colunas_legadas_orcamentos()
 
     @app.context_processor
     def inject_globals():
@@ -139,4 +140,53 @@ def _migrar_orcamentos_para_itens():
                 },
             )
 
+        conexao.commit()
+
+
+def _remover_colunas_legadas_orcamentos():
+    """Depois que _migrar_orcamentos_para_itens() copia os dados antigos
+    (tipo_produto, quantidade, custo_unitario_produto) para a tabela nova
+    itens_orcamento, essas colunas continuam existindo na tabela
+    "orcamentos" — e como "tipo_produto" tinha restrição NOT NULL, todo
+    orçamento novo passava a dar erro ao salvar, porque o sistema não
+    preenche mais esse campo. Aqui a gente remove essas colunas que não
+    são mais usadas.
+
+    SQLite recente (3.35+) suporta "ALTER TABLE ... DROP COLUMN" direto.
+    Em versões mais antigas isso não existe, então caímos para o jeito
+    manual: recriar a tabela só com as colunas atuais e copiar os dados."""
+    from sqlalchemy import text
+
+    colunas_legadas = ("tipo_produto", "quantidade", "custo_unitario_produto")
+
+    with db.engine.connect() as conexao:
+        resultado = conexao.execute(text("PRAGMA table_info(orcamentos)"))
+        linhas_colunas = resultado.fetchall()
+        colunas_existentes = {linha[1] for linha in linhas_colunas}
+
+        colunas_legadas_presentes = [c for c in colunas_legadas if c in colunas_existentes]
+        if not colunas_legadas_presentes:
+            return  # banco já está no formato atual, nada a remover
+
+        try:
+            for coluna in colunas_legadas_presentes:
+                conexao.execute(text(f"ALTER TABLE orcamentos DROP COLUMN {coluna}"))
+            conexao.commit()
+            return
+        except Exception:
+            conexao.rollback()
+
+        # Fallback para SQLite mais antigo, sem suporte a DROP COLUMN:
+        # recria a tabela do zero, só com as colunas que continuam em uso.
+        colunas_mantidas = [
+            linha[1] for linha in linhas_colunas if linha[1] not in colunas_legadas
+        ]
+        colunas_sql = ", ".join(colunas_mantidas)
+
+        conexao.execute(text("ALTER TABLE orcamentos RENAME TO orcamentos_legado_tmp"))
+        db.metadata.tables["orcamentos"].create(bind=conexao)
+        conexao.execute(
+            text(f"INSERT INTO orcamentos ({colunas_sql}) SELECT {colunas_sql} FROM orcamentos_legado_tmp")
+        )
+        conexao.execute(text("DROP TABLE orcamentos_legado_tmp"))
         conexao.commit()
