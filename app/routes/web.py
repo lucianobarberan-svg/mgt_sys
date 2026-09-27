@@ -99,11 +99,13 @@ def _coletar_itens_do_formulario(form):
     return itens, None
 
 
-def _registrar_perda_estoque(tipo_produto, quantidade, motivo):
+def _registrar_perda_estoque(tipo_produto, quantidade, motivo, custo_personalizacao=0.0):
     """Registra uma perda de estoque (produto quebrado, com defeito de
     personalização etc.). Dá baixa na quantidade e trava o custo unitário
     do item no momento da perda — não mexe em nenhum orçamento, já que o
-    cliente não tem relação nenhuma com esse prejuízo."""
+    cliente não tem relação nenhuma com esse prejuízo. O custo da
+    personalização (tinta, material etc.) que já tinha sido gasto nesse
+    produto entra somado ao custo do produto no valor perdido."""
     item = ItemEstoque.query.filter_by(tipo_produto=tipo_produto).first()
     if not item:
         flash(f'Não há item de estoque cadastrado para "{tipo_produto}".', "erro")
@@ -121,6 +123,7 @@ def _registrar_perda_estoque(tipo_produto, quantidade, motivo):
         tipo_produto=tipo_produto,
         quantidade=quantidade,
         custo_unitario=item.custo_unitario,
+        custo_personalizacao=custo_personalizacao or 0.0,
         motivo=motivo,
     )
     db.session.add(perda)
@@ -536,6 +539,7 @@ def estoque_perdas_nova():
         tipo_produto = request.form.get("tipo_produto", "").strip()
         quantidade = _parse_quantidade(request.form.get("quantidade", ""))
         motivo = request.form.get("motivo", "").strip() or None
+        custo_personalizacao_texto = request.form.get("custo_personalizacao") or None
 
         erro = None
         if not tipo_produto:
@@ -543,11 +547,18 @@ def estoque_perdas_nova():
         elif quantidade is None:
             erro = "Quantidade inválida — informe um número inteiro maior que zero."
 
+        custo_personalizacao = 0.0
+        if erro is None and custo_personalizacao_texto:
+            try:
+                custo_personalizacao = float(custo_personalizacao_texto.replace(",", "."))
+            except ValueError:
+                erro = "Custo da personalização inválido — informe um valor numérico."
+
         if erro:
             flash(erro, "erro")
             return render_template("estoque/perdas_form.html", itens=itens, form=request.form)
 
-        perda = _registrar_perda_estoque(tipo_produto, quantidade, motivo)
+        perda = _registrar_perda_estoque(tipo_produto, quantidade, motivo, custo_personalizacao)
         if perda is None:
             return render_template("estoque/perdas_form.html", itens=itens, form=request.form)
 

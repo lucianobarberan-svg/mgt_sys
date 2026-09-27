@@ -430,6 +430,49 @@ def test_registrar_perda_da_baixa_no_estoque(app, db, client):
     assert perda.motivo == "Quebrou na sublimação"
 
 
+def test_perda_soma_custo_de_personalizacao_ao_valor_perdido(app, db, client):
+    db.session.add(ItemEstoque(tipo_produto="Caneca personalizada", custo_unitario=10.0, quantidade_em_estoque=20))
+    db.session.commit()
+
+    resposta = client.post(
+        "/estoque/perdas/nova",
+        data={
+            "tipo_produto": "Caneca personalizada",
+            "quantidade": "2",
+            "custo_personalizacao": "5,50",
+            "motivo": "Estampa saiu torta",
+        },
+        follow_redirects=True,
+    )
+    assert resposta.status_code == 200
+
+    from app.models import PerdaEstoque
+
+    perda = PerdaEstoque.query.first()
+    assert perda is not None
+    assert perda.custo_unitario == 10.0
+    assert perda.custo_personalizacao == 5.5
+    assert perda.custo_produto_total == 20.0  # 10 * 2
+    assert perda.valor_perdido == 25.5  # (10*2) + 5.5
+
+
+def test_perda_sem_custo_de_personalizacao_mantem_valor_perdido_so_do_produto(app, db, client):
+    db.session.add(ItemEstoque(tipo_produto="Chaveiro personalizado", custo_unitario=3.0, quantidade_em_estoque=10))
+    db.session.commit()
+
+    client.post(
+        "/estoque/perdas/nova",
+        data={"tipo_produto": "Chaveiro personalizado", "quantidade": "1"},
+        follow_redirects=True,
+    )
+
+    from app.models import PerdaEstoque
+
+    perda = PerdaEstoque.query.first()
+    assert perda.custo_personalizacao == 0.0
+    assert perda.valor_perdido == 3.0
+
+
 def test_perda_nao_mexe_em_orcamentos(app, db, client):
     cliente = _criar_cliente(db)
     db.session.add(ItemEstoque(tipo_produto="Caneca personalizada", custo_unitario=10.0, quantidade_em_estoque=20))

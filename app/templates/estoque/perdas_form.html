@@ -26,6 +26,14 @@
     </div>
 
     <div class="campo">
+        <label for="custo_personalizacao">Custo da personalização — tinta etc. (R$)</label>
+        <input type="number" id="custo_personalizacao" name="custo_personalizacao" min="0" step="0.01"
+               value="{{ form.custo_personalizacao if form and form.custo_personalizacao else '' }}"
+               aria-describedby="ajuda-custo-personalizacao-perda">
+        <span id="ajuda-custo-personalizacao-perda" class="dica">Quanto já tinha sido gasto de tinta/material nesse produto antes dele quebrar (opcional). Esse valor entra somado ao custo do produto no valor perdido.</span>
+    </div>
+
+    <div class="campo">
         <label for="motivo">Motivo (opcional)</label>
         <textarea id="motivo" name="motivo" rows="3" aria-describedby="ajuda-motivo">{{ form.motivo if form else '' }}</textarea>
         <span id="ajuda-motivo" class="dica">Ex.: caneca quebrou na sublimação, chaveiro saiu com defeito de impressão etc.</span>

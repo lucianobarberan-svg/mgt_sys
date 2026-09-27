@@ -44,7 +44,7 @@
             <td>{{ perda.tipo_produto }}</td>
             <td>{{ perda.quantidade }}</td>
             <td class="valor-monetario">{{ "R$ %.2f"|format(perda.custo_unitario) }}</td>
-            <td class="valor-monetario"><span style="color: var(--cor-erro);">{{ "R$ %.2f"|format(perda.valor_perdido) }}</span></td>
+            <td class="valor-monetario" title="Produto: R$ {{ '%.2f'|format(perda.custo_produto_total) }}{% if perda.custo_personalizacao %} + Personalização: R$ {{ '%.2f'|format(perda.custo_personalizacao) }}{% endif %}"><span style="color: var(--cor-erro);">{{ "R$ %.2f"|format(perda.valor_perdido) }}</span></td>
             <td>{{ perda.motivo or "—" }}</td>
             <td class="data-tabela">{{ perda.data_registro.strftime("%d/%m/%Y") if perda.data_registro else "—" }}</td>
             <td class="acoes acoes-icones">

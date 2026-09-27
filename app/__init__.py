@@ -71,6 +71,9 @@ def _atualizar_esquema_banco():
         "custo_personalizacao": "REAL",
         "estoque_baixado": "BOOLEAN NOT NULL DEFAULT 0",
     }
+    colunas_novas_perdas_estoque = {
+        "custo_personalizacao": "REAL NOT NULL DEFAULT 0",
+    }
 
     with db.engine.connect() as conexao:
         resultado = conexao.execute(text("PRAGMA table_info(orcamentos)"))
@@ -79,6 +82,13 @@ def _atualizar_esquema_banco():
         for nome, definicao_sql in colunas_novas_orcamentos.items():
             if nome not in colunas_existentes:
                 conexao.execute(text(f"ALTER TABLE orcamentos ADD COLUMN {nome} {definicao_sql}"))
+
+        resultado_perdas = conexao.execute(text("PRAGMA table_info(perdas_estoque)"))
+        colunas_existentes_perdas = {linha[1] for linha in resultado_perdas}
+
+        for nome, definicao_sql in colunas_novas_perdas_estoque.items():
+            if nome not in colunas_existentes_perdas:
+                conexao.execute(text(f"ALTER TABLE perdas_estoque ADD COLUMN {nome} {definicao_sql}"))
 
         conexao.commit()
 

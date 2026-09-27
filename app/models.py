@@ -112,12 +112,17 @@ class PerdaEstoque(db.Model):
     tipo_produto = db.Column(db.String(80), nullable=False)
     quantidade = db.Column(db.Integer, nullable=False, default=1)
     custo_unitario = db.Column(db.Float, nullable=False, default=0.0)
+    custo_personalizacao = db.Column(db.Float, nullable=False, default=0.0)
     motivo = db.Column(db.String(200))
     data_registro = db.Column(db.DateTime, default=datetime.now)
 
     @property
-    def valor_perdido(self):
+    def custo_produto_total(self):
         return round((self.custo_unitario or 0) * (self.quantidade or 1), 2)
+
+    @property
+    def valor_perdido(self):
+        return round(self.custo_produto_total + (self.custo_personalizacao or 0), 2)
 
     def to_dict(self):
         return {
@@ -125,6 +130,8 @@ class PerdaEstoque(db.Model):
             "tipo_produto": self.tipo_produto,
             "quantidade": self.quantidade,
             "custo_unitario": self.custo_unitario,
+            "custo_personalizacao": self.custo_personalizacao,
+            "custo_produto_total": self.custo_produto_total,
             "valor_perdido": self.valor_perdido,
             "motivo": self.motivo,
             "data_registro": self.data_registro.strftime("%d/%m/%Y") if self.data_registro else None,
