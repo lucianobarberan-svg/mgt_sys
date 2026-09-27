@@ -2,9 +2,28 @@ from datetime import datetime, timedelta
 
 from flask import Blueprint, jsonify, request
 
-from app.models import STATUS_COM_BAIXA_ESTOQUE, Cliente, ItemEstoque, Orcamento
+from app.models import STATUS_COM_BAIXA_ESTOQUE, Cliente, ItemEstoque, Orcamento, PerdaEstoque
 
 api_bp = Blueprint("api", __name__)
+
+
+def _aplicar_filtro_periodo(query, coluna, data_inicio, data_fim):
+    """Filtra uma query por um intervalo de datas (YYYY-MM-DD), incluindo
+    o dia final inteiro. Usado tanto para orçamentos quanto para perdas de
+    estoque no resumo do Dashboard."""
+    if data_inicio:
+        try:
+            dt_inicio = datetime.strptime(data_inicio, "%Y-%m-%d").date()
+            query = query.filter(coluna >= dt_inicio)
+        except ValueError:
+            pass
+    if data_fim:
+        try:
+            dt_fim = datetime.strptime(data_fim, "%Y-%m-%d").date()
+            query = query.filter(coluna < dt_fim + timedelta(days=1))
+        except ValueError:
+            pass
+    return query
 
 
 # --------------------------------------------------------------------------
@@ -65,21 +84,7 @@ def api_dashboard_resumo():
     data_inicio = request.args.get("data_inicio", "").strip()
     data_fim = request.args.get("data_fim", "").strip()
 
-    query = Orcamento.query
-    if data_inicio:
-        try:
-            dt_inicio = datetime.strptime(data_inicio, "%Y-%m-%d").date()
-            query = query.filter(Orcamento.data_solicitacao >= dt_inicio)
-        except ValueError:
-            pass
-    if data_fim:
-        try:
-            dt_fim = datetime.strptime(data_fim, "%Y-%m-%d").date()
-            # Inclui o dia final inteiro (até 23:59:59).
-            query = query.filter(Orcamento.data_solicitacao < dt_fim + timedelta(days=1))
-        except ValueError:
-            pass
-
+    query = _aplicar_filtro_periodo(Orcamento.query, Orcamento.data_solicitacao, data_inicio, data_fim)
     orcamentos = query.all()
 
     por_status = {}
@@ -95,17 +100,33 @@ def api_dashboard_resumo():
 
     for o in orcamentos:
         por_status[o.status] = por_status.get(o.status, 0) + 1
-        por_tipo[o.tipo_produto] = por_tipo.get(o.tipo_produto, 0) + 1
+        for item in o.itens:
+            por_tipo[item.tipo_produto] = por_tipo.get(item.tipo_produto, 0) + 1
         if o.valor_estimado:
             valor_total += o.valor_estimado
 
         if o.status in STATUS_COM_BAIXA_ESTOQUE:
             receita_confirmada += o.valor_estimado or 0
             custo_confirmado += o.custo_total
-            lucro_por_tipo[o.tipo_produto] = lucro_por_tipo.get(o.tipo_produto, 0) + o.lucro_liquido
+            # Um orçamento pode ter mais de um produto — o lucro dele é
+            # dividido entre os produtos proporcionalmente ao custo de cada
+            # um (aproximação para o gráfico, não uma contabilidade exata
+            # por produto).
+            if o.itens:
+                custo_itens_total = sum(item.custo_total for item in o.itens)
+                for item in o.itens:
+                    fatia = (item.custo_total / custo_itens_total) if custo_itens_total else (1 / len(o.itens))
+                    lucro_por_tipo[item.tipo_produto] = lucro_por_tipo.get(item.tipo_produto, 0) + o.lucro_liquido * fatia
 
     lucro_confirmado = receita_confirmada - custo_confirmado
     margem_percentual = round((lucro_confirmado / receita_confirmada * 100), 1) if receita_confirmada else 0.0
+
+    # Perdas de estoque (produto quebrado, com defeito etc.) no mesmo
+    # período — não têm relação com orçamentos, mas entram no relatório
+    # financeiro do Dashboard para mostrar o impacto no lucro real.
+    perdas = _aplicar_filtro_periodo(PerdaEstoque.query, PerdaEstoque.data_registro, data_inicio, data_fim).all()
+    quantidade_perdida = sum(p.quantidade or 1 for p in perdas)
+    valor_perdido = round(sum(p.valor_perdido for p in perdas), 2)
 
     return jsonify(
         {
@@ -120,6 +141,9 @@ def api_dashboard_resumo():
                 "lucro_confirmado": round(lucro_confirmado, 2),
                 "margem_percentual": margem_percentual,
                 "lucro_por_tipo_produto": {k: round(v, 2) for k, v in lucro_por_tipo.items()},
+                "quantidade_perdida": quantidade_perdida,
+                "valor_perdido": valor_perdido,
+                "lucro_apos_perdas": round(lucro_confirmado - valor_perdido, 2),
             },
         }
     )

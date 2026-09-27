@@ -67,6 +67,25 @@
     </div>
 </section>
 
+<section class="cartao" aria-label="Perdas de estoque">
+    <h2 style="margin-top:0;">Perdas de estoque</h2>
+    <p class="dica" style="margin-top:0;">Produtos quebrados ou com defeito no período — sem relação com orçamentos, mas descontam do lucro real do negócio. <a href="{{ url_for('web.estoque_perdas_lista') }}">Ver todas as perdas</a>.</p>
+    <div class="grade-cartoes" style="margin-bottom:0;">
+        <div class="cartao estatistica">
+            <strong id="perda-quantidade">–</strong>
+            <span>Unidades perdidas</span>
+        </div>
+        <div class="cartao estatistica">
+            <strong id="perda-valor" style="color: var(--cor-erro);">–</strong>
+            <span>Valor perdido</span>
+        </div>
+        <div class="cartao estatistica">
+            <strong id="perda-lucro-apos">–</strong>
+            <span>Lucro líquido após perdas</span>
+        </div>
+    </div>
+</section>
+
 <div class="linha-campos">
     <div class="grafico-container">
         <h2>Orçamentos por status</h2>

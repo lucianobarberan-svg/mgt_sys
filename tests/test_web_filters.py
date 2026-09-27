@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from app.models import Cliente, Orcamento
+from app.models import Cliente, ItemOrcamento, Orcamento
 
 
 def _criar_cliente_com_orcamento(db, nome_cliente, data_solicitacao=None):
@@ -8,11 +8,8 @@ def _criar_cliente_com_orcamento(db, nome_cliente, data_solicitacao=None):
     db.session.add(cliente)
     db.session.commit()
 
-    orcamento = Orcamento(
-        codigo=Orcamento.gerar_codigo(),
-        cliente_id=cliente.id,
-        tipo_produto="Caneca personalizada",
-    )
+    orcamento = Orcamento(codigo=Orcamento.gerar_codigo(), cliente_id=cliente.id)
+    orcamento.itens.append(ItemOrcamento(tipo_produto="Caneca personalizada", quantidade=1))
     if data_solicitacao is not None:
         orcamento.data_solicitacao = data_solicitacao
     db.session.add(orcamento)

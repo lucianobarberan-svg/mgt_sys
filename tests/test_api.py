@@ -1,4 +1,4 @@
-from app.models import Cliente, Orcamento
+from app.models import Cliente, ItemOrcamento, Orcamento
 
 
 def _criar_cliente_com_orcamento(db, nome_cliente="Thaís Toledo", tipo="Caneca personalizada"):
@@ -6,9 +6,8 @@ def _criar_cliente_com_orcamento(db, nome_cliente="Thaís Toledo", tipo="Caneca 
     db.session.add(cliente)
     db.session.commit()
 
-    orcamento = Orcamento(
-        codigo=Orcamento.gerar_codigo(), cliente_id=cliente.id, tipo_produto=tipo
-    )
+    orcamento = Orcamento(codigo=Orcamento.gerar_codigo(), cliente_id=cliente.id)
+    orcamento.itens.append(ItemOrcamento(tipo_produto=tipo, quantidade=1))
     db.session.add(orcamento)
     db.session.commit()
     return cliente, orcamento

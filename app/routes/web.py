@@ -9,7 +9,9 @@ from app.models import (
     TIPOS_PRODUTO,
     Cliente,
     ItemEstoque,
+    ItemOrcamento,
     Orcamento,
+    PerdaEstoque,
 )
 
 web_bp = Blueprint("web", __name__)
@@ -32,35 +34,97 @@ def _aplicar_movimentacao_estoque(orcamento):
     """Dá baixa no estoque na primeira vez que o orçamento chega a um
     status confirmado (Aprovado, Em produção, Concluído ou Entregue), e
     devolve a quantidade ao estoque se o orçamento for cancelado depois de
-    já ter baixado. Também trava o custo unitário do produto (o valor
-    atual do item no estoque) no orçamento nesse momento, para que o
+    já ter baixado. Também trava o custo unitário de cada produto do
+    orçamento (o valor atual do item no estoque) nesse momento, para que o
     relatório financeiro do Dashboard reflita o custo da época da baixa,
-    mesmo que o custo do item mude depois."""
-    item = ItemEstoque.query.filter_by(tipo_produto=orcamento.tipo_produto).first()
-    quantidade = orcamento.quantidade or 1
-
+    mesmo que o custo do item mude depois. Um orçamento pode ter mais de
+    um produto — a baixa/devolução é aplicada a cada um deles."""
     deve_baixar = orcamento.status in STATUS_COM_BAIXA_ESTOQUE
     if deve_baixar and not orcamento.estoque_baixado:
-        if item:
-            item.quantidade_em_estoque -= quantidade
-            orcamento.custo_unitario_produto = item.custo_unitario
-            if item.quantidade_em_estoque < 0:
+        for item_orcamento in orcamento.itens:
+            item_estoque = ItemEstoque.query.filter_by(tipo_produto=item_orcamento.tipo_produto).first()
+            quantidade = item_orcamento.quantidade or 1
+            if item_estoque:
+                item_estoque.quantidade_em_estoque -= quantidade
+                item_orcamento.custo_unitario_produto = item_estoque.custo_unitario
+                if item_estoque.quantidade_em_estoque < 0:
+                    flash(
+                        f"Atenção: o estoque de \"{item_orcamento.tipo_produto}\" ficou negativo "
+                        f"({item_estoque.quantidade_em_estoque} un.). Confira a quantidade cadastrada em Estoque.",
+                        "erro",
+                    )
+            else:
                 flash(
-                    f"Atenção: o estoque de \"{orcamento.tipo_produto}\" ficou negativo "
-                    f"({item.quantidade_em_estoque} un.). Confira a quantidade cadastrada em Estoque.",
+                    f"Não há item de estoque cadastrado para \"{item_orcamento.tipo_produto}\" — "
+                    "cadastre em Estoque para o custo entrar automaticamente no relatório financeiro.",
                     "erro",
                 )
-        else:
-            flash(
-                f"Não há item de estoque cadastrado para \"{orcamento.tipo_produto}\" — "
-                "cadastre em Estoque para o custo entrar automaticamente no relatório financeiro.",
-                "erro",
-            )
         orcamento.estoque_baixado = True
     elif orcamento.status == "Cancelado" and orcamento.estoque_baixado:
-        if item:
-            item.quantidade_em_estoque += quantidade
+        for item_orcamento in orcamento.itens:
+            item_estoque = ItemEstoque.query.filter_by(tipo_produto=item_orcamento.tipo_produto).first()
+            if item_estoque:
+                item_estoque.quantidade_em_estoque += item_orcamento.quantidade or 1
         orcamento.estoque_baixado = False
+
+
+def _coletar_itens_do_formulario(form):
+    """Lê as listas paralelas "item_tipo_produto[]" e "item_quantidade[]"
+    enviadas pelo formulário (um orçamento pode ter vários produtos) e
+    devolve uma lista de dicts {tipo_produto, quantidade}. Linhas em
+    branco (deixadas pelo botão "+ Adicionar produto" e não preenchidas)
+    são ignoradas silenciosamente. Devolve (itens, erro)."""
+    tipos = form.getlist("item_tipo_produto[]")
+    quantidades_brutas = form.getlist("item_quantidade[]")
+
+    itens = []
+    for i, tipo_produto in enumerate(tipos):
+        tipo_produto = (tipo_produto or "").strip()
+        quantidade_bruta = quantidades_brutas[i] if i < len(quantidades_brutas) else ""
+        if not tipo_produto and not (quantidade_bruta or "").strip():
+            continue  # linha em branco — ignora
+
+        if not tipo_produto:
+            return None, "Selecione o produto em todas as linhas preenchidas."
+
+        quantidade = _parse_quantidade(quantidade_bruta)
+        if quantidade is None:
+            return None, "Quantidade inválida — informe um número inteiro maior que zero em cada produto."
+
+        itens.append({"tipo_produto": tipo_produto, "quantidade": quantidade})
+
+    if not itens:
+        return None, "Adicione pelo menos um produto ao orçamento."
+
+    return itens, None
+
+
+def _registrar_perda_estoque(tipo_produto, quantidade, motivo):
+    """Registra uma perda de estoque (produto quebrado, com defeito de
+    personalização etc.). Dá baixa na quantidade e trava o custo unitário
+    do item no momento da perda — não mexe em nenhum orçamento, já que o
+    cliente não tem relação nenhuma com esse prejuízo."""
+    item = ItemEstoque.query.filter_by(tipo_produto=tipo_produto).first()
+    if not item:
+        flash(f'Não há item de estoque cadastrado para "{tipo_produto}".', "erro")
+        return None
+
+    item.quantidade_em_estoque -= quantidade
+    if item.quantidade_em_estoque < 0:
+        flash(
+            f"Atenção: o estoque de \"{tipo_produto}\" ficou negativo "
+            f"({item.quantidade_em_estoque} un.) depois dessa perda. Confira a quantidade cadastrada em Estoque.",
+            "erro",
+        )
+
+    perda = PerdaEstoque(
+        tipo_produto=tipo_produto,
+        quantidade=quantidade,
+        custo_unitario=item.custo_unitario,
+        motivo=motivo,
+    )
+    db.session.add(perda)
+    return perda
 
 
 def _resolver_intervalo_datas(args):
@@ -214,16 +278,13 @@ def orcamentos_novo():
 
     if request.method == "POST":
         cliente_id = request.form.get("cliente_id")
-        tipo_produto = request.form.get("tipo_produto", "").strip()
-        quantidade = _parse_quantidade(request.form.get("quantidade", ""))
+        itens_form, erro_itens = _coletar_itens_do_formulario(request.form)
 
         erro = None
         if not cliente_id:
             erro = "Selecione um cliente."
-        elif not tipo_produto:
-            erro = "Selecione o tipo de produto."
-        elif quantidade is None:
-            erro = "Quantidade inválida — informe um número inteiro maior que zero."
+        elif erro_itens:
+            erro = erro_itens
 
         if erro:
             flash(erro, "erro")
@@ -231,6 +292,7 @@ def orcamentos_novo():
                 "orcamentos/form.html",
                 orcamento=None,
                 form=request.form,
+                itens_form=itens_form or [],
                 clientes=clientes,
                 tipos_produto=TIPOS_PRODUTO,
                 status_opcoes=STATUS_ORCAMENTO,
@@ -252,14 +314,16 @@ def orcamentos_novo():
         orcamento = Orcamento(
             codigo=Orcamento.gerar_codigo(),
             cliente_id=int(cliente_id),
-            tipo_produto=tipo_produto,
-            quantidade=quantidade,
             descricao=request.form.get("descricao", "").strip() or None,
             valor_estimado=valor_estimado,
             custo_personalizacao=custo_personalizacao,
             status=request.form.get("status") or "Solicitado",
             prazo_entrega=prazo_entrega,
         )
+        for item_form in itens_form:
+            orcamento.itens.append(
+                ItemOrcamento(tipo_produto=item_form["tipo_produto"], quantidade=item_form["quantidade"])
+            )
         db.session.add(orcamento)
         _aplicar_movimentacao_estoque(orcamento)
         db.session.commit()
@@ -270,6 +334,7 @@ def orcamentos_novo():
         "orcamentos/form.html",
         orcamento=None,
         form={},
+        itens_form=[{"tipo_produto": "", "quantidade": 1}],
         clientes=clientes,
         tipos_produto=TIPOS_PRODUTO,
         status_opcoes=STATUS_ORCAMENTO,
@@ -285,16 +350,13 @@ def orcamentos_editar(orcamento_id):
 
     if request.method == "POST":
         cliente_id = request.form.get("cliente_id")
-        tipo_produto = request.form.get("tipo_produto", "").strip()
-        quantidade = _parse_quantidade(request.form.get("quantidade", ""))
+        itens_form, erro_itens = _coletar_itens_do_formulario(request.form)
 
         erro = None
         if not cliente_id:
             erro = "Selecione um cliente."
-        elif not tipo_produto:
-            erro = "Selecione o tipo de produto."
-        elif quantidade is None:
-            erro = "Quantidade inválida — informe um número inteiro maior que zero."
+        elif erro_itens:
+            erro = erro_itens
 
         if erro:
             flash(erro, "erro")
@@ -302,6 +364,7 @@ def orcamentos_editar(orcamento_id):
                 "orcamentos/form.html",
                 orcamento=orcamento,
                 form=request.form,
+                itens_form=itens_form or [],
                 clientes=clientes,
                 tipos_produto=TIPOS_PRODUTO,
                 status_opcoes=STATUS_ORCAMENTO,
@@ -321,22 +384,31 @@ def orcamentos_editar(orcamento_id):
             custo_personalizacao = float(custo_personalizacao.replace(",", "."))
 
         orcamento.cliente_id = int(cliente_id)
-        orcamento.tipo_produto = tipo_produto
-        orcamento.quantidade = quantidade
         orcamento.descricao = request.form.get("descricao", "").strip() or None
         orcamento.valor_estimado = valor_estimado
         orcamento.custo_personalizacao = custo_personalizacao
         orcamento.status = request.form.get("status") or orcamento.status
         orcamento.prazo_entrega = prazo_entrega
+
+        # Substitui a lista de produtos pela que veio do formulário.
+        for item_antigo in list(orcamento.itens):
+            orcamento.itens.remove(item_antigo)
+        for item_form in itens_form:
+            orcamento.itens.append(
+                ItemOrcamento(tipo_produto=item_form["tipo_produto"], quantidade=item_form["quantidade"])
+            )
+
         _aplicar_movimentacao_estoque(orcamento)
         db.session.commit()
         flash(f"Orçamento {orcamento.codigo} atualizado com sucesso.", "sucesso")
         return redirect(url_for("web.orcamentos_lista"))
 
+    itens_form = [{"tipo_produto": item.tipo_produto, "quantidade": item.quantidade} for item in orcamento.itens]
     return render_template(
         "orcamentos/form.html",
         orcamento=orcamento,
         form=None,
+        itens_form=itens_form,
         clientes=clientes,
         tipos_produto=TIPOS_PRODUTO,
         status_opcoes=STATUS_ORCAMENTO,
@@ -350,11 +422,13 @@ def orcamentos_excluir(orcamento_id):
     codigo = orcamento.codigo
 
     # Se o estoque já tinha sido baixado para esse orçamento, devolve a
-    # quantidade antes de excluir — senão o item some do estoque sem volta.
+    # quantidade de cada produto antes de excluir — senão o item some do
+    # estoque sem volta.
     if orcamento.estoque_baixado:
-        item = ItemEstoque.query.filter_by(tipo_produto=orcamento.tipo_produto).first()
-        if item:
-            item.quantidade_em_estoque += orcamento.quantidade or 1
+        for item_orcamento in orcamento.itens:
+            item_estoque = ItemEstoque.query.filter_by(tipo_produto=item_orcamento.tipo_produto).first()
+            if item_estoque:
+                item_estoque.quantidade_em_estoque += item_orcamento.quantidade or 1
 
     db.session.delete(orcamento)
     db.session.commit()
@@ -441,6 +515,60 @@ def estoque_excluir(item_id):
     db.session.commit()
     flash(f'Item de estoque "{tipo_produto}" removido.', "sucesso")
     return redirect(url_for("web.estoque_lista"))
+
+
+# --------------------------------------------------------------------------
+# Perdas de estoque (produto quebrado, com defeito etc. — sem relação com
+# orçamentos, já que o cliente continua com o pedido normalmente)
+# --------------------------------------------------------------------------
+@web_bp.route("/estoque/perdas")
+def estoque_perdas_lista():
+    perdas = PerdaEstoque.query.order_by(PerdaEstoque.data_registro.desc()).all()
+    valor_total_perdido = round(sum(p.valor_perdido for p in perdas), 2)
+    return render_template("estoque/perdas_list.html", perdas=perdas, valor_total_perdido=valor_total_perdido)
+
+
+@web_bp.route("/estoque/perdas/nova", methods=["GET", "POST"])
+def estoque_perdas_nova():
+    itens = ItemEstoque.query.order_by(ItemEstoque.tipo_produto).all()
+
+    if request.method == "POST":
+        tipo_produto = request.form.get("tipo_produto", "").strip()
+        quantidade = _parse_quantidade(request.form.get("quantidade", ""))
+        motivo = request.form.get("motivo", "").strip() or None
+
+        erro = None
+        if not tipo_produto:
+            erro = "Selecione o produto."
+        elif quantidade is None:
+            erro = "Quantidade inválida — informe um número inteiro maior que zero."
+
+        if erro:
+            flash(erro, "erro")
+            return render_template("estoque/perdas_form.html", itens=itens, form=request.form)
+
+        perda = _registrar_perda_estoque(tipo_produto, quantidade, motivo)
+        if perda is None:
+            return render_template("estoque/perdas_form.html", itens=itens, form=request.form)
+
+        db.session.commit()
+        flash(f'Perda de {quantidade} un. de "{tipo_produto}" registrada.', "sucesso")
+        return redirect(url_for("web.estoque_perdas_lista"))
+
+    tipo_pre_selecionado = request.args.get("tipo_produto", "")
+    return render_template("estoque/perdas_form.html", itens=itens, form={"tipo_produto": tipo_pre_selecionado})
+
+
+@web_bp.route("/estoque/perdas/<int:perda_id>/excluir", methods=["POST"])
+def estoque_perdas_excluir(perda_id):
+    perda = PerdaEstoque.query.get_or_404(perda_id)
+    item = ItemEstoque.query.filter_by(tipo_produto=perda.tipo_produto).first()
+    if item:
+        item.quantidade_em_estoque += perda.quantidade
+    db.session.delete(perda)
+    db.session.commit()
+    flash("Registro de perda removido e quantidade devolvida ao estoque.", "sucesso")
+    return redirect(url_for("web.estoque_perdas_lista"))
 
 
 # --------------------------------------------------------------------------

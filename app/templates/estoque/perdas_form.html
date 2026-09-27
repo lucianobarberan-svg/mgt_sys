@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Registrar perda{% endblock %}
+
+{% block conteudo %}
+<h1>Registrar perda de estoque</h1>
+<p class="dica" style="margin-top: -0.5rem;">Use isso quando um produto quebrar ou sair com defeito durante a personalização. Isso dá baixa na quantidade em estoque, mas não tem nenhuma relação com orçamentos — o pedido do cliente continua normalmente.</p>
+
+{% if not itens %}
+<p class="vazio">Você precisa cadastrar pelo menos um item em <a href="{{ url_for('web.estoque_lista') }}">Estoque</a> antes de registrar uma perda.</p>
+{% else %}
+<form method="post" novalidate>
+    <div class="campo">
+        <label for="tipo_produto">Produto <span aria-hidden="true">*</span></label>
+        <select id="tipo_produto" name="tipo_produto" required>
+            <option value="">Selecione o produto</option>
+            {% for item in itens %}
+            <option value="{{ item.tipo_produto }}" {% if form and form.tipo_produto == item.tipo_produto %}selected{% endif %}>{{ item.tipo_produto }} (custo atual: R$ {{ "%.2f"|format(item.custo_unitario) }})</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="campo">
+        <label for="quantidade">Quantidade perdida</label>
+        <input type="number" id="quantidade" name="quantidade" min="1" step="1"
+               value="{{ form.quantidade if form and form.quantidade else 1 }}">
+    </div>
+
+    <div class="campo">
+        <label for="motivo">Motivo (opcional)</label>
+        <textarea id="motivo" name="motivo" rows="3" aria-describedby="ajuda-motivo">{{ form.motivo if form else '' }}</textarea>
+        <span id="ajuda-motivo" class="dica">Ex.: caneca quebrou na sublimação, chaveiro saiu com defeito de impressão etc.</span>
+    </div>
+
+    <div class="acoes">
+        <button type="submit" class="botao">Registrar perda</button>
+        <a class="botao botao--secundario" href="{{ url_for('web.estoque_perdas_lista') }}">Cancelar</a>
+    </div>
+</form>
+{% endif %}
+{% endblock %}

@@ -19,21 +19,34 @@
         </select>
     </div>
 
-    <div class="linha-campos">
-        <div class="campo">
-            <label for="tipo_produto">Tipo de produto <span aria-hidden="true">*</span></label>
-            <select id="tipo_produto" name="tipo_produto" required>
-                <option value="">Selecione o produto</option>
-                {% for tipo in tipos_produto %}
-                <option value="{{ tipo }}" {% if dados and dados.tipo_produto == tipo %}selected{% endif %}>{{ tipo }}</option>
-                {% endfor %}
-            </select>
+    <div class="campo">
+        <label>Produtos deste orçamento <span aria-hidden="true">*</span></label>
+        <span class="dica">Um orçamento pode ter mais de um produto — adicione quantas linhas precisar.</span>
+        <div id="lista-itens-orcamento">
+            {% for item_form in itens_form %}
+            <div class="linha-item-orcamento linha-campos" style="align-items: flex-end; margin-top: 0.6rem;">
+                <div class="campo" style="margin-bottom: 0;">
+                    <label class="sr-only" for="item_tipo_produto_{{ loop.index0 }}">Produto</label>
+                    <select name="item_tipo_produto[]" id="item_tipo_produto_{{ loop.index0 }}">
+                        <option value="">Selecione o produto</option>
+                        {% for tipo in tipos_produto %}
+                        <option value="{{ tipo }}" {% if item_form.tipo_produto == tipo %}selected{% endif %}>{{ tipo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="campo" style="margin-bottom: 0; max-width: 130px;">
+                    <label class="sr-only" for="item_quantidade_{{ loop.index0 }}">Quantidade</label>
+                    <input type="number" name="item_quantidade[]" id="item_quantidade_{{ loop.index0 }}" min="1" step="1" placeholder="Qtd." value="{{ item_form.quantidade }}">
+                </div>
+                <div class="campo" style="margin-bottom: 0; flex: 0 0 auto;">
+                    <button type="button" class="botao-icone botao-icone--perigo botao-remover-item" title="Remover produto" aria-label="Remover produto">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
         </div>
-        <div class="campo">
-            <label for="quantidade">Quantidade</label>
-            <input type="number" id="quantidade" name="quantidade" min="1" step="1"
-                   value="{{ dados.quantidade if dados and dados.quantidade else 1 }}">
-        </div>
+        <button type="button" class="botao botao--secundario" id="botao-adicionar-item" style="margin-top: 0.75rem;">+ Adicionar produto</button>
     </div>
 
     <div class="campo">
@@ -47,14 +60,16 @@
         <div class="campo">
             <label for="valor_estimado">Valor de venda (R$)</label>
             <input type="number" id="valor_estimado" name="valor_estimado" min="0" step="0.01"
-                   value="{{ dados.valor_estimado if dados else '' }}">
+                   value="{{ dados.valor_estimado if dados else '' }}"
+                   aria-describedby="ajuda-valor-estimado">
+            <span id="ajuda-valor-estimado" class="dica">Valor total do orçamento, considerando todos os produtos.</span>
         </div>
         <div class="campo">
             <label for="custo_personalizacao">Custo da personalização — tinta etc. (R$)</label>
             <input type="number" id="custo_personalizacao" name="custo_personalizacao" min="0" step="0.01"
                    value="{{ dados.custo_personalizacao if dados and dados.custo_personalizacao else '' }}"
                    aria-describedby="ajuda-custo-personalizacao">
-            <span id="ajuda-custo-personalizacao" class="dica">Quanto você gastou de tinta/material para personalizar esse pedido.</span>
+            <span id="ajuda-custo-personalizacao" class="dica">Quanto você gastou de tinta/material para personalizar esse pedido (total).</span>
         </div>
         <div class="campo">
             <label for="prazo_entrega">Prazo de entrega</label>
@@ -70,7 +85,7 @@
             <option value="{{ s }}" {% if (dados and dados.status == s) or (not dados and s == "Solicitado") %}selected{% endif %}>{{ s }}</option>
             {% endfor %}
         </select>
-        <span class="dica">A partir de "Aprovado" o sistema dá baixa no estoque do produto automaticamente.</span>
+        <span class="dica">A partir de "Aprovado" o sistema dá baixa no estoque de cada produto automaticamente.</span>
     </div>
 
     <div class="cartao" id="preview-financeiro" aria-live="polite">
@@ -78,18 +93,18 @@
         <div class="grade-cartoes" style="margin-bottom:0;">
             <div class="estatistica">
                 <strong id="preview-custo-produto">—</strong>
-                <span>Custo do produto (estoque)</span>
+                <span>Custo dos produtos (estoque)</span>
             </div>
             <div class="estatistica">
                 <strong id="preview-custo-total">—</strong>
-                <span>Custo total (produto + personalização)</span>
+                <span>Custo total (produtos + personalização)</span>
             </div>
             <div class="estatistica">
                 <strong id="preview-lucro">—</strong>
                 <span>Lucro líquido estimado</span>
             </div>
         </div>
-        <p class="dica" style="margin-bottom:0;">Estimativa com base no custo atual do item em <a href="{{ url_for('web.estoque_lista') }}">Estoque</a>. O valor definitivo é travado quando o orçamento passa para "Aprovado".</p>
+        <p class="dica" style="margin-bottom:0;">Estimativa com base no custo atual de cada item em <a href="{{ url_for('web.estoque_lista') }}">Estoque</a>. O valor definitivo é travado quando o orçamento passa para "Aprovado".</p>
     </div>
 
     <div class="acoes">

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Perdas de estoque{% endblock %}
+
+{% block conteudo %}
+<div class="acoes" style="justify-content: space-between; margin-bottom: 1.25rem;">
+    <h1>Perdas de estoque</h1>
+    <div class="acoes" style="margin-bottom: 0;">
+        <a class="botao botao--secundario" href="{{ url_for('web.estoque_lista') }}">&larr; Voltar ao estoque</a>
+        <a class="botao" href="{{ url_for('web.estoque_perdas_nova') }}">+ Registrar perda</a>
+    </div>
+</div>
+
+<p class="dica" style="margin-top: -0.5rem;">Produtos que quebraram ou saíram com defeito durante a personalização. Não têm nenhuma relação com orçamentos — o pedido do cliente continua normalmente.</p>
+
+<section class="grade-cartoes" aria-label="Resumo das perdas">
+    <div class="cartao estatistica">
+        <strong>{{ perdas|length }}</strong>
+        <span>Perda(s) registrada(s)</span>
+    </div>
+    <div class="cartao estatistica">
+        <strong style="color: var(--cor-erro);">{{ "R$ %.2f"|format(valor_total_perdido) }}</strong>
+        <span>Valor total perdido</span>
+    </div>
+</section>
+
+{% if perdas %}
+<div class="tabela-responsiva">
+<table>
+    <caption>Perdas registradas ({{ perdas|length }})</caption>
+    <thead>
+        <tr>
+            <th scope="col">Produto</th>
+            <th scope="col">Quantidade</th>
+            <th scope="col">Custo unitário</th>
+            <th scope="col">Valor perdido</th>
+            <th scope="col">Motivo</th>
+            <th scope="col">Data</th>
+            <th scope="col">Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for perda in perdas %}
+        <tr>
+            <td>{{ perda.tipo_produto }}</td>
+            <td>{{ perda.quantidade }}</td>
+            <td class="valor-monetario">{{ "R$ %.2f"|format(perda.custo_unitario) }}</td>
+            <td class="valor-monetario"><span style="color: var(--cor-erro);">{{ "R$ %.2f"|format(perda.valor_perdido) }}</span></td>
+            <td>{{ perda.motivo or "—" }}</td>
+            <td class="data-tabela">{{ perda.data_registro.strftime("%d/%m/%Y") if perda.data_registro else "—" }}</td>
+            <td class="acoes acoes-icones">
+                <form method="post" action="{{ url_for('web.estoque_perdas_excluir', perda_id=perda.id) }}" onsubmit="return confirm('Excluir este registro de perda e devolver {{ perda.quantidade }} un. de \'{{ perda.tipo_produto }}\' ao estoque?');" style="display:inline;">
+                    <button type="submit" class="botao-icone botao-icone--perigo" title="Excluir perda" aria-label="Excluir perda de {{ perda.tipo_produto }}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<p class="vazio">Nenhuma perda registrada ainda. <a href="{{ url_for('web.estoque_perdas_nova') }}">Registrar a primeira</a>.</p>
+{% endif %}
+{% endblock %}

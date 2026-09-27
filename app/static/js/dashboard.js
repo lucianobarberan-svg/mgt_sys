@@ -49,6 +49,12 @@
             elLucro.style.color = (financeiro.lucro_confirmado || 0) < 0 ? "var(--cor-erro)" : "var(--cor-sucesso)";
             document.getElementById("fin-margem").textContent = `${(financeiro.margem_percentual || 0).toLocaleString("pt-BR")}%`;
 
+            document.getElementById("perda-quantidade").textContent = financeiro.quantidade_perdida || 0;
+            document.getElementById("perda-valor").textContent = formatarMoeda(financeiro.valor_perdido || 0);
+            const elLucroAposPerdas = document.getElementById("perda-lucro-apos");
+            elLucroAposPerdas.textContent = formatarMoeda(financeiro.lucro_apos_perdas || 0);
+            elLucroAposPerdas.style.color = (financeiro.lucro_apos_perdas || 0) < 0 ? "var(--cor-erro)" : "var(--cor-sucesso)";
+
             const rotulosStatus = Object.keys(dados.por_status);
             const valoresStatus = Object.values(dados.por_status);
             preencherAlternativaTextual("tabela-status-alt", "Orçamentos por status", dados.por_status);

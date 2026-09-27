@@ -31,6 +31,7 @@ def create_app(config_name=None):
 
         db.create_all()
         _atualizar_esquema_banco()
+        _migrar_orcamentos_para_itens()
 
     @app.context_processor
     def inject_globals():
@@ -67,8 +68,6 @@ def _atualizar_esquema_banco():
     from sqlalchemy import text
 
     colunas_novas_orcamentos = {
-        "quantidade": "INTEGER NOT NULL DEFAULT 1",
-        "custo_unitario_produto": "REAL",
         "custo_personalizacao": "REAL",
         "estoque_baixado": "BOOLEAN NOT NULL DEFAULT 0",
     }
@@ -80,5 +79,54 @@ def _atualizar_esquema_banco():
         for nome, definicao_sql in colunas_novas_orcamentos.items():
             if nome not in colunas_existentes:
                 conexao.execute(text(f"ALTER TABLE orcamentos ADD COLUMN {nome} {definicao_sql}"))
+
+        conexao.commit()
+
+
+def _migrar_orcamentos_para_itens():
+    """Um orçamento passou a poder ter mais de um produto (tabela nova
+    "itens_orcamento"). Bancos de dados já existentes ainda guardam o
+    produto/quantidade/custo direto na tabela "orcamentos" (do jeito
+    antigo, um produto só por orçamento) — essa função move esses dados
+    para um item na tabela nova, na primeira vez que o sistema roda com a
+    versão atualizada, sem duplicar nada nem perder o histórico."""
+    from sqlalchemy import text
+
+    with db.engine.connect() as conexao:
+        resultado = conexao.execute(text("PRAGMA table_info(orcamentos)"))
+        colunas_existentes = {linha[1] for linha in resultado}
+
+        if "tipo_produto" not in colunas_existentes:
+            # Banco já criado no formato atual (com itens_orcamento) —
+            # não tem coluna antiga para migrar.
+            return
+
+        linhas = conexao.execute(
+            text(
+                "SELECT id, tipo_produto, quantidade, custo_unitario_produto "
+                "FROM orcamentos WHERE tipo_produto IS NOT NULL"
+            )
+        ).fetchall()
+
+        for orcamento_id, tipo_produto, quantidade, custo_unitario_produto in linhas:
+            ja_tem_item = conexao.execute(
+                text("SELECT COUNT(*) FROM itens_orcamento WHERE orcamento_id = :id"),
+                {"id": orcamento_id},
+            ).scalar()
+            if ja_tem_item:
+                continue
+
+            conexao.execute(
+                text(
+                    "INSERT INTO itens_orcamento (orcamento_id, tipo_produto, quantidade, custo_unitario_produto) "
+                    "VALUES (:orcamento_id, :tipo_produto, :quantidade, :custo_unitario_produto)"
+                ),
+                {
+                    "orcamento_id": orcamento_id,
+                    "tipo_produto": tipo_produto,
+                    "quantidade": quantidade or 1,
+                    "custo_unitario_produto": custo_unitario_produto,
+                },
+            )
 
         conexao.commit()

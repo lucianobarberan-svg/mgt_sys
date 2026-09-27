@@ -64,7 +64,7 @@
                 <tr>
                     <td>${escapeHtml(o.codigo)}</td>
                     <td>${escapeHtml(o.cliente_nome)}</td>
-                    <td>${escapeHtml(o.tipo_produto)}</td>
+                    <td>${escapeHtml(o.resumo_produtos)}</td>
                     <td>${o.valor_estimado ? "R$ " + Number(o.valor_estimado).toFixed(2) : "—"}</td>
                     <td><span class="badge">${escapeHtml(o.status)}</span></td>
                     <td>${escapeHtml(o.data_solicitacao || "—")}</td>

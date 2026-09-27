@@ -27,7 +27,7 @@ body {
 }
 
 .container {
-    max-width: 1180px;
+    max-width: 1320px;
     margin: 0 auto;
     padding: 0 1.25rem;
 }
@@ -183,7 +183,7 @@ caption {
 }
 th, td {
     text-align: left;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 0.85rem;
     border-bottom: 1px solid var(--cor-borda);
     vertical-align: middle;
 }
@@ -198,6 +198,12 @@ td.valor-monetario {
 td.data-tabela {
     white-space: nowrap;
 }
+td.produtos-tabela {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 .acoes {
     display: flex;
@@ -209,7 +215,7 @@ td.data-tabela {
 .acoes-icones {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.3rem;
     flex-wrap: nowrap;
 }
 
@@ -217,8 +223,8 @@ td.data-tabela {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2.1rem;
+    height: 2.1rem;
     padding: 0;
     flex-shrink: 0;
     border-radius: 6px;
@@ -255,6 +261,24 @@ td.data-tabela {
 .botao-icone--whatsapp:focus {
     background: var(--cor-sucesso-fundo);
     border-color: var(--cor-sucesso);
+}
+.botao-icone--aviso {
+    color: #8a5a00;
+    border-color: #e8d3ab;
+}
+.botao-icone--aviso:hover,
+.botao-icone--aviso:focus {
+    background: #fbf1e0;
+    border-color: #c6a15b;
+}
+.botao-icone:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+.botao-icone:disabled:hover,
+.botao-icone:disabled:focus {
+    background: var(--cor-fundo);
+    border-color: var(--cor-borda);
 }
 
 .botao {
@@ -429,5 +453,14 @@ legend {
     .botao-icone--whatsapp:focus {
         background: #1e3a24;
         border-color: #a8e6b4;
+    }
+    .botao-icone--aviso {
+        color: #e3c589;
+        border-color: #6b5326;
+    }
+    .botao-icone--aviso:hover,
+    .botao-icone--aviso:focus {
+        background: #3a2e12;
+        border-color: #e3c589;
     }
 }
