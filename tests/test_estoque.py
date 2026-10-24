@@ -93,7 +93,12 @@ def test_estoque_editar_atualiza_quantidade(app, db, client):
 
     resposta = client.post(
         f"/estoque/{item.id}/editar",
-        data={"custo_unitario": "6,50", "quantidade_em_estoque": "25", "estoque_minimo": "2"},
+        data={
+            "tipo_produto": "Copo personalizado",
+            "custo_unitario": "6,50",
+            "quantidade_em_estoque": "25",
+            "estoque_minimo": "2",
+        },
         follow_redirects=True,
     )
     assert resposta.status_code == 200
@@ -101,6 +106,105 @@ def test_estoque_editar_atualiza_quantidade(app, db, client):
     item_atualizado = ItemEstoque.query.get(item.id)
     assert item_atualizado.custo_unitario == 6.5
     assert item_atualizado.quantidade_em_estoque == 25
+
+
+def test_estoque_editar_renomeia_produto(app, db, client):
+    item = ItemEstoque(tipo_produto="Copo personalizado", custo_unitario=5.0, quantidade_em_estoque=10)
+    db.session.add(item)
+    db.session.commit()
+
+    resposta = client.post(
+        f"/estoque/{item.id}/editar",
+        data={
+            "tipo_produto": "Copo térmico personalizado",
+            "custo_unitario": "5,00",
+            "quantidade_em_estoque": "10",
+            "estoque_minimo": "0",
+        },
+        follow_redirects=True,
+    )
+    assert resposta.status_code == 200
+
+    item_atualizado = ItemEstoque.query.get(item.id)
+    assert item_atualizado.tipo_produto == "Copo térmico personalizado"
+
+
+def test_estoque_editar_mantem_nome_antigo_em_orcamento_ja_feito(app, db, client):
+    """Renomear um item de estoque não deve alterar orçamentos que já
+    usaram o nome antigo — eles continuam mostrando o que foi registrado."""
+    item = ItemEstoque(tipo_produto="Copo personalizado", custo_unitario=5.0, quantidade_em_estoque=10)
+    db.session.add(item)
+    db.session.commit()
+
+    cliente = _criar_cliente(db)
+    orcamento = Orcamento(codigo=Orcamento.gerar_codigo(), cliente_id=cliente.id, valor_estimado=50.0)
+    orcamento.itens.append(ItemOrcamento(tipo_produto="Copo personalizado", quantidade=1))
+    db.session.add(orcamento)
+    db.session.commit()
+
+    client.post(
+        f"/estoque/{item.id}/editar",
+        data={
+            "tipo_produto": "Copo térmico personalizado",
+            "custo_unitario": "5,00",
+            "quantidade_em_estoque": "10",
+            "estoque_minimo": "0",
+        },
+        follow_redirects=True,
+    )
+
+    orcamento_recarregado = Orcamento.query.get(orcamento.id)
+    assert orcamento_recarregado.itens[0].tipo_produto == "Copo personalizado"
+
+
+def test_estoque_editar_rejeita_nome_duplicado(app, db, client):
+    db.session.add(ItemEstoque(tipo_produto="Caneca personalizada", custo_unitario=10.0, quantidade_em_estoque=5))
+    item = ItemEstoque(tipo_produto="Copo personalizado", custo_unitario=5.0, quantidade_em_estoque=10)
+    db.session.add(item)
+    db.session.commit()
+
+    client.post(
+        f"/estoque/{item.id}/editar",
+        data={
+            "tipo_produto": "Caneca personalizada",
+            "custo_unitario": "5,00",
+            "quantidade_em_estoque": "10",
+            "estoque_minimo": "0",
+        },
+        follow_redirects=True,
+    )
+
+    item_recarregado = ItemEstoque.query.get(item.id)
+    assert item_recarregado.tipo_produto == "Copo personalizado"
+
+
+def test_estoque_novo_aceita_produto_personalizado_fora_da_pre_lista(app, db, client):
+    resposta = client.post(
+        "/estoque/novo",
+        data={
+            "tipo_produto": "__novo__",
+            "novo_tipo_produto": "Squeeze personalizado",
+            "custo_unitario": "12,00",
+            "quantidade_em_estoque": "5",
+        },
+        follow_redirects=True,
+    )
+    assert resposta.status_code == 200
+
+    item = ItemEstoque.query.filter_by(tipo_produto="Squeeze personalizado").first()
+    assert item is not None
+    assert item.custo_unitario == 12.0
+
+
+def test_estoque_novo_produto_personalizado_fica_disponivel_em_orcamentos(app, db, client):
+    client.post(
+        "/estoque/novo",
+        data={"tipo_produto": "__novo__", "novo_tipo_produto": "Squeeze personalizado", "custo_unitario": "12,00"},
+        follow_redirects=True,
+    )
+
+    resposta = client.get("/orcamentos/novo")
+    assert "Squeeze personalizado".encode() in resposta.data
 
 
 def test_estoque_excluir_remove_item(app, db, client):

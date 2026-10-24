@@ -100,6 +100,21 @@ def _coletar_itens_do_formulario(form):
     return itens, None
 
 
+def _tipos_produto_para_orcamento():
+    """Lista de produtos disponível para escolher num orçamento: a pré-lista
+    padrão (TIPOS_PRODUTO) mais qualquer produto personalizado que já tenha
+    sido cadastrado no Estoque (e que não esteja na pré-lista), para que um
+    produto novo cadastrado lá também possa ser usado num orçamento."""
+    tipos_personalizados = sorted(
+        {
+            item.tipo_produto
+            for item in ItemEstoque.query.all()
+            if item.tipo_produto not in TIPOS_PRODUTO
+        }
+    )
+    return TIPOS_PRODUTO + tipos_personalizados
+
+
 def _registrar_perda_estoque(tipo_produto, quantidade, motivo, custo_personalizacao=0.0):
     """Registra uma perda de estoque (produto quebrado, com defeito de
     personalização etc.). Dá baixa na quantidade e trava o custo unitário
@@ -327,7 +342,7 @@ def orcamentos_novo():
                 form=request.form,
                 itens_form=itens_form or [],
                 clientes=clientes,
-                tipos_produto=TIPOS_PRODUTO,
+                tipos_produto=_tipos_produto_para_orcamento(),
                 status_opcoes=STATUS_ORCAMENTO,
                 itens_estoque=itens_estoque,
             )
@@ -369,7 +384,7 @@ def orcamentos_novo():
         form={},
         itens_form=[{"tipo_produto": "", "quantidade": 1}],
         clientes=clientes,
-        tipos_produto=TIPOS_PRODUTO,
+        tipos_produto=_tipos_produto_para_orcamento(),
         status_opcoes=STATUS_ORCAMENTO,
         itens_estoque=itens_estoque,
     )
@@ -399,7 +414,7 @@ def orcamentos_editar(orcamento_id):
                 form=request.form,
                 itens_form=itens_form or [],
                 clientes=clientes,
-                tipos_produto=TIPOS_PRODUTO,
+                tipos_produto=_tipos_produto_para_orcamento(),
                 status_opcoes=STATUS_ORCAMENTO,
                 itens_estoque=itens_estoque,
             )
@@ -443,7 +458,7 @@ def orcamentos_editar(orcamento_id):
         form=None,
         itens_form=itens_form,
         clientes=clientes,
-        tipos_produto=TIPOS_PRODUTO,
+        tipos_produto=_tipos_produto_para_orcamento(),
         status_opcoes=STATUS_ORCAMENTO,
         itens_estoque=itens_estoque,
     )
@@ -481,6 +496,9 @@ def orcamentos_imprimir(orcamento_id):
 # --------------------------------------------------------------------------
 # Estoque (itens em branco usados na personalização, com custo e quantidade)
 # --------------------------------------------------------------------------
+NOVO_PRODUTO_VALOR = "__novo__"
+
+
 @web_bp.route("/estoque")
 def estoque_lista():
     itens = ItemEstoque.query.order_by(ItemEstoque.tipo_produto).all()
@@ -495,16 +513,21 @@ def estoque_novo():
 
     if request.method == "POST":
         tipo_produto = request.form.get("tipo_produto", "").strip()
+        # Produto que não está na pré-lista: o usuário escolheu a opção
+        # "+ Cadastrar um novo produto" e digitou o nome num campo à parte.
+        if tipo_produto == NOVO_PRODUTO_VALOR:
+            tipo_produto = request.form.get("novo_tipo_produto", "").strip()
+
         erro = None
         if not tipo_produto:
-            erro = "Selecione o tipo de produto."
+            erro = "Selecione o tipo de produto ou digite o nome do novo produto."
         elif tipo_produto in tipos_ja_cadastrados:
             erro = f'Já existe um item de estoque cadastrado para "{tipo_produto}".'
 
         if erro:
             flash(erro, "erro")
             return render_template(
-                "estoque/form.html", item=None, form=request.form, tipos_produto=tipos_disponiveis
+                "estoque/form.html", item=None, form=request.form, tipos_produto=tipos_disponiveis, novo_produto_valor=NOVO_PRODUTO_VALOR
             )
 
         custo_unitario = float((request.form.get("custo_unitario") or "0").replace(",", "."))
@@ -522,7 +545,7 @@ def estoque_novo():
         flash(f'Item de estoque "{tipo_produto}" cadastrado com sucesso.', "sucesso")
         return redirect(url_for("web.estoque_lista"))
 
-    return render_template("estoque/form.html", item=None, form={}, tipos_produto=tipos_disponiveis)
+    return render_template("estoque/form.html", item=None, form={}, tipos_produto=tipos_disponiveis, novo_produto_valor=NOVO_PRODUTO_VALOR)
 
 
 @web_bp.route("/estoque/<int:item_id>/editar", methods=["GET", "POST"])
@@ -530,6 +553,22 @@ def estoque_editar(item_id):
     item = ItemEstoque.query.get_or_404(item_id)
 
     if request.method == "POST":
+        novo_nome = request.form.get("tipo_produto", "").strip()
+        erro = None
+        if not novo_nome:
+            erro = "O nome do produto não pode ficar em branco."
+        elif novo_nome != item.tipo_produto:
+            ja_existe = ItemEstoque.query.filter(
+                ItemEstoque.tipo_produto == novo_nome, ItemEstoque.id != item.id
+            ).first()
+            if ja_existe:
+                erro = f'Já existe um item de estoque cadastrado para "{novo_nome}".'
+
+        if erro:
+            flash(erro, "erro")
+            return render_template("estoque/form.html", item=item, form=request.form, tipos_produto=[item.tipo_produto])
+
+        item.tipo_produto = novo_nome
         item.custo_unitario = float((request.form.get("custo_unitario") or "0").replace(",", "."))
         item.quantidade_em_estoque = int(request.form.get("quantidade_em_estoque") or 0)
         item.estoque_minimo = int(request.form.get("estoque_minimo") or 0)

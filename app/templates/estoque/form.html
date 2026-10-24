@@ -5,22 +5,27 @@
 {% set dados = form if form is not none else item %}
 <h1>{{ "Editar item de estoque" if item else "Novo item de estoque" }}</h1>
 
-{% if not item and not tipos_produto %}
-<p class="vazio">Todos os tipos de produto já têm um item de estoque cadastrado. <a href="{{ url_for('web.estoque_lista') }}">Voltar para o estoque</a>.</p>
-{% else %}
 <form method="post" novalidate>
     <div class="campo">
         <label for="tipo_produto">Tipo de produto <span aria-hidden="true">*</span></label>
         {% if item %}
-        <input type="text" id="tipo_produto" value="{{ item.tipo_produto }}" disabled>
-        <span class="dica">O tipo de produto não pode ser alterado depois de criado.</span>
+        <input type="text" id="tipo_produto" name="tipo_produto" value="{{ dados.tipo_produto if dados else item.tipo_produto }}" required>
+        <span class="dica">Cuidado: orçamentos e perdas já registrados continuam mostrando o nome de quando foram feitos — só os próximos passam a usar o nome novo.</span>
         {% else %}
         <select id="tipo_produto" name="tipo_produto" required>
             <option value="">Selecione o produto</option>
             {% for tipo in tipos_produto %}
             <option value="{{ tipo }}" {% if dados and dados.tipo_produto == tipo %}selected{% endif %}>{{ tipo }}</option>
             {% endfor %}
+            <option value="{{ novo_produto_valor }}" {% if dados and dados.tipo_produto == novo_produto_valor %}selected{% endif %}>+ Cadastrar um novo produto (não está na lista)</option>
         </select>
+        <div class="campo" id="campo-novo-tipo-produto" hidden>
+            <label for="novo_tipo_produto">Nome do novo produto</label>
+            <input type="text" id="novo_tipo_produto" name="novo_tipo_produto"
+                   value="{{ dados.novo_tipo_produto if dados and dados.novo_tipo_produto else '' }}"
+                   aria-describedby="ajuda-novo-produto">
+            <span id="ajuda-novo-produto" class="dica">Digite o nome do produto, do jeito que ele deve aparecer para você e para a Thaís.</span>
+        </div>
         {% endif %}
     </div>
 
@@ -51,5 +56,8 @@
         <a class="botao botao--secundario" href="{{ url_for('web.estoque_lista') }}">Cancelar</a>
     </div>
 </form>
-{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ static_url('js/estoque_form.js') }}"></script>
 {% endblock %}
