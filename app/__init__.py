@@ -48,9 +48,16 @@ def create_app(config_name=None):
         from app import models  # noqa: F401
 
         db.create_all()
-        _atualizar_esquema_banco()
-        _migrar_orcamentos_para_itens()
-        _remover_colunas_legadas_orcamentos()
+        if db.engine.dialect.name == "sqlite":
+            # As migrações abaixo usam comandos específicos do SQLite
+            # (PRAGMA table_info) para adaptar um banco já existente, criado
+            # por uma versão antiga do sistema, sem perder os dados que já
+            # estão lá. Num banco novo (ex.: PostgreSQL em produção), o
+            # db.create_all() acima já cria as tabelas no formato atual —
+            # não existe "versão antiga" para migrar.
+            _atualizar_esquema_banco()
+            _migrar_orcamentos_para_itens()
+            _remover_colunas_legadas_orcamentos()
 
     @app.context_processor
     def inject_globals():
