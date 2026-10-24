@@ -182,8 +182,7 @@ def test_estoque_novo_aceita_produto_personalizado_fora_da_pre_lista(app, db, cl
     resposta = client.post(
         "/estoque/novo",
         data={
-            "tipo_produto": "__novo__",
-            "novo_tipo_produto": "Squeeze personalizado",
+            "tipo_produto": "Squeeze personalizado",
             "custo_unitario": "12,00",
             "quantidade_em_estoque": "5",
         },
@@ -199,12 +198,46 @@ def test_estoque_novo_aceita_produto_personalizado_fora_da_pre_lista(app, db, cl
 def test_estoque_novo_produto_personalizado_fica_disponivel_em_orcamentos(app, db, client):
     client.post(
         "/estoque/novo",
-        data={"tipo_produto": "__novo__", "novo_tipo_produto": "Squeeze personalizado", "custo_unitario": "12,00"},
+        data={"tipo_produto": "Squeeze personalizado", "custo_unitario": "12,00"},
         follow_redirects=True,
     )
 
     resposta = client.get("/orcamentos/novo")
     assert "Squeeze personalizado".encode() in resposta.data
+
+
+def test_estoque_novo_permite_renomear_produto_da_pre_lista_no_primeiro_cadastro(app, db, client):
+    """O campo de nome no cadastro já vem editável — a pessoa pode escolher
+    um produto da pré-lista como ponto de partida e ajustar o nome ali
+    mesmo, no mesmo passo em que informa a quantidade, sem precisar
+    cadastrar e só depois editar."""
+    resposta = client.post(
+        "/estoque/novo",
+        data={
+            "tipo_produto": "Caneca personalizada grande",
+            "custo_unitario": "15,00",
+            "quantidade_em_estoque": "8",
+        },
+        follow_redirects=True,
+    )
+    assert resposta.status_code == 200
+
+    item = ItemEstoque.query.filter_by(tipo_produto="Caneca personalizada grande").first()
+    assert item is not None
+    assert item.quantidade_em_estoque == 8
+    # O nome original da pré-lista não foi cadastrado junto.
+    assert ItemEstoque.query.filter_by(tipo_produto="Caneca personalizada").first() is None
+
+
+def test_estoque_novo_formulario_mostra_campo_de_nome_editavel(app, db, client):
+    """Checagem simples do HTML: o campo de nome é um texto editável (não
+    um <select> travado), com a pré-lista disponível só como atalho."""
+    resposta = client.get("/estoque/novo")
+
+    assert resposta.status_code == 200
+    assert b'id="tipo_produto" name="tipo_produto"' in resposta.data
+    assert b'id="tipo_produto_atalho"' in resposta.data
+    assert "Caneca personalizada".encode() in resposta.data
 
 
 def test_estoque_excluir_remove_item(app, db, client):

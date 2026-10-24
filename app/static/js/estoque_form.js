@@ -1,28 +1,25 @@
 /**
- * Formulário de novo item de estoque: quando a pessoa escolhe a opção
- * "+ Cadastrar um novo produto" no lugar de um item da pré-lista, mostra
- * um campo de texto para digitar o nome do produto novo.
+ * Formulário de novo item de estoque: a lista de produtos pré-cadastrados
+ * é só um atalho pra preencher o nome — ao escolher um produto nela, o
+ * campo de texto "Tipo de produto" é preenchido com esse nome e fica
+ * selecionado, pronto pra ser ajustado ali mesmo (por exemplo, renomeado)
+ * antes de salvar, junto com a quantidade. Quem preferir digitar direto o
+ * nome de um produto que não está na lista também pode.
  */
 (function () {
-    const NOVO_PRODUTO_VALOR = "__novo__";
+    const selectAtalho = document.getElementById("tipo_produto_atalho");
+    const inputTipoProduto = document.getElementById("tipo_produto");
 
-    const selectTipo = document.getElementById("tipo_produto");
-    const campoNovoProduto = document.getElementById("campo-novo-tipo-produto");
-    const inputNovoProduto = document.getElementById("novo_tipo_produto");
-
-    if (!selectTipo || selectTipo.tagName !== "SELECT" || !campoNovoProduto || !inputNovoProduto) {
+    if (!selectAtalho || !inputTipoProduto) {
         return;
     }
 
-    function atualizarVisibilidade() {
-        const mostrar = selectTipo.value === NOVO_PRODUTO_VALOR;
-        campoNovoProduto.hidden = !mostrar;
-        inputNovoProduto.required = mostrar;
-        if (mostrar) {
-            inputNovoProduto.focus();
+    selectAtalho.addEventListener("change", function () {
+        if (!selectAtalho.value) {
+            return;
         }
-    }
-
-    selectTipo.addEventListener("change", atualizarVisibilidade);
-    atualizarVisibilidade();
+        inputTipoProduto.value = selectAtalho.value;
+        inputTipoProduto.focus();
+        inputTipoProduto.select();
+    });
 })();

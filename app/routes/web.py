@@ -496,9 +496,6 @@ def orcamentos_imprimir(orcamento_id):
 # --------------------------------------------------------------------------
 # Estoque (itens em branco usados na personalização, com custo e quantidade)
 # --------------------------------------------------------------------------
-NOVO_PRODUTO_VALOR = "__novo__"
-
-
 @web_bp.route("/estoque")
 def estoque_lista():
     itens = ItemEstoque.query.order_by(ItemEstoque.tipo_produto).all()
@@ -508,26 +505,26 @@ def estoque_lista():
 
 @web_bp.route("/estoque/novo", methods=["GET", "POST"])
 def estoque_novo():
+    # Produtos da pré-lista que ainda não têm item de estoque cadastrado —
+    # servem só de atalho pra preencher o nome (o campo continua editável,
+    # então dá pra ajustar o nome já nesse primeiro cadastro, junto com a
+    # quantidade, sem precisar entrar de novo em "editar" depois).
     tipos_ja_cadastrados = {item.tipo_produto for item in ItemEstoque.query.all()}
     tipos_disponiveis = [t for t in TIPOS_PRODUTO if t not in tipos_ja_cadastrados]
 
     if request.method == "POST":
         tipo_produto = request.form.get("tipo_produto", "").strip()
-        # Produto que não está na pré-lista: o usuário escolheu a opção
-        # "+ Cadastrar um novo produto" e digitou o nome num campo à parte.
-        if tipo_produto == NOVO_PRODUTO_VALOR:
-            tipo_produto = request.form.get("novo_tipo_produto", "").strip()
 
         erro = None
         if not tipo_produto:
-            erro = "Selecione o tipo de produto ou digite o nome do novo produto."
+            erro = "Informe o tipo de produto."
         elif tipo_produto in tipos_ja_cadastrados:
             erro = f'Já existe um item de estoque cadastrado para "{tipo_produto}".'
 
         if erro:
             flash(erro, "erro")
             return render_template(
-                "estoque/form.html", item=None, form=request.form, tipos_produto=tipos_disponiveis, novo_produto_valor=NOVO_PRODUTO_VALOR
+                "estoque/form.html", item=None, form=request.form, tipos_produto=tipos_disponiveis
             )
 
         custo_unitario = float((request.form.get("custo_unitario") or "0").replace(",", "."))
@@ -545,7 +542,7 @@ def estoque_novo():
         flash(f'Item de estoque "{tipo_produto}" cadastrado com sucesso.', "sucesso")
         return redirect(url_for("web.estoque_lista"))
 
-    return render_template("estoque/form.html", item=None, form={}, tipos_produto=tipos_disponiveis, novo_produto_valor=NOVO_PRODUTO_VALOR)
+    return render_template("estoque/form.html", item=None, form={}, tipos_produto=tipos_disponiveis)
 
 
 @web_bp.route("/estoque/<int:item_id>/editar", methods=["GET", "POST"])

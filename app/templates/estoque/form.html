@@ -8,25 +8,24 @@
 <form method="post" novalidate>
     <div class="campo">
         <label for="tipo_produto">Tipo de produto <span aria-hidden="true">*</span></label>
-        {% if item %}
-        <input type="text" id="tipo_produto" name="tipo_produto" value="{{ dados.tipo_produto if dados else item.tipo_produto }}" required>
-        <span class="dica">Cuidado: orçamentos e perdas já registrados continuam mostrando o nome de quando foram feitos — só os próximos passam a usar o nome novo.</span>
-        {% else %}
-        <select id="tipo_produto" name="tipo_produto" required>
-            <option value="">Selecione o produto</option>
+        {% if not item %}
+        <select id="tipo_produto_atalho" aria-label="Escolher produto da lista para preencher automaticamente">
+            <option value="">Escolher da lista para preencher (ou digite direto abaixo)</option>
             {% for tipo in tipos_produto %}
-            <option value="{{ tipo }}" {% if dados and dados.tipo_produto == tipo %}selected{% endif %}>{{ tipo }}</option>
+            <option value="{{ tipo }}">{{ tipo }}</option>
             {% endfor %}
-            <option value="{{ novo_produto_valor }}" {% if dados and dados.tipo_produto == novo_produto_valor %}selected{% endif %}>+ Cadastrar um novo produto (não está na lista)</option>
         </select>
-        <div class="campo" id="campo-novo-tipo-produto" hidden>
-            <label for="novo_tipo_produto">Nome do novo produto</label>
-            <input type="text" id="novo_tipo_produto" name="novo_tipo_produto"
-                   value="{{ dados.novo_tipo_produto if dados and dados.novo_tipo_produto else '' }}"
-                   aria-describedby="ajuda-novo-produto">
-            <span id="ajuda-novo-produto" class="dica">Digite o nome do produto, do jeito que ele deve aparecer para você e para a Thaís.</span>
-        </div>
         {% endif %}
+        <input type="text" id="tipo_produto" name="tipo_produto" required
+               value="{{ dados.tipo_produto if dados else (item.tipo_produto if item else '') }}"
+               placeholder="Nome do produto" aria-describedby="ajuda-tipo-produto">
+        <span id="ajuda-tipo-produto" class="dica">
+            {% if item %}
+            Cuidado: orçamentos e perdas já registrados continuam mostrando o nome de quando foram feitos — só os próximos passam a usar o nome novo.
+            {% else %}
+            Escolha um produto da lista para preencher automaticamente — já pode ajustar o nome aqui mesmo, junto com a quantidade, sem precisar editar depois. Ou, se o produto não estiver na lista, digite o nome direto.
+            {% endif %}
+        </span>
     </div>
 
     <div class="linha-campos">
