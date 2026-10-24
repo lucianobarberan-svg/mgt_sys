@@ -48,6 +48,18 @@ def test_orcamentos_lista_filtra_por_cliente_id(app, db, client):
     assert "Cliente A".encode() in resposta.data
 
 
+def test_orcamentos_lista_cliente_id_invalido_nao_quebra(app, db, client):
+    """O cliente_id vem da URL como texto. No PostgreSQL (produção),
+    comparar a coluna inteira direto com um texto dá erro de tipo — por
+    isso um cliente_id que não é número (ou que veio malformado) é
+    ignorado, em vez de quebrar a página com erro 500."""
+    _, orcamento = _criar_cliente_com_orcamento(db, "Cliente A")
+
+    resposta = client.get("/orcamentos?cliente_id=abc")
+    assert resposta.status_code == 200
+    assert orcamento.codigo.encode() in resposta.data
+
+
 def test_orcamentos_lista_ignora_filtro_de_data(app, db, client):
     # O filtro por período (data/mês atual/mês anterior) pertence apenas ao
     # Dashboard — a lista de Orçamentos filtra somente por código e cliente.

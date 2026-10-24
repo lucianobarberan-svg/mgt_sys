@@ -295,25 +295,30 @@ def clientes_excluir(cliente_id):
 @web_bp.route("/orcamentos")
 def orcamentos_lista():
     codigo_busca = request.args.get("codigo", "").strip()
-    cliente_id = request.args.get("cliente_id", "").strip()
+    cliente_id_bruto = request.args.get("cliente_id", "").strip()
+    # cliente_id vem da URL como texto. No SQLite isso nunca deu problema
+    # (comparação frouxa de tipos), mas no PostgreSQL (produção, desde a
+    # migração pro Neon) comparar uma coluna inteira com um texto dá erro
+    # — por isso convertemos pra número antes de usar no filtro.
+    cliente_id = int(cliente_id_bruto) if cliente_id_bruto.isdigit() else None
 
     query = Orcamento.query
     if codigo_busca:
         query = query.filter(Orcamento.codigo.ilike(f"%{codigo_busca}%"))
-    if cliente_id:
+    if cliente_id is not None:
         query = query.filter(Orcamento.cliente_id == cliente_id)
 
     orcamentos = query.order_by(Orcamento.data_solicitacao.desc()).all()
 
     cliente_filtrado = None
-    if cliente_id:
+    if cliente_id is not None:
         cliente_filtrado = Cliente.query.get(cliente_id)
 
     return render_template(
         "orcamentos/list.html",
         orcamentos=orcamentos,
         codigo_busca=codigo_busca,
-        cliente_id=cliente_id,
+        cliente_id=cliente_id_bruto,
         cliente_filtrado=cliente_filtrado,
     )
 
